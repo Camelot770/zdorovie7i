@@ -1,11 +1,6 @@
-export interface Coordinates {
-  lat: number;
-  lng: number;
-}
-
 export interface Address {
   location?: string;
-  coordinates?: Coordinates;
+  coordinates?: [number, number];
   city?: string;
   street?: string;
   house?: string;

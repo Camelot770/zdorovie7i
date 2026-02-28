@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import MainPage from "./pages/MainPage";
@@ -9,6 +10,14 @@ import MyRecordsPage from "./pages/MyRecordsPage";
 import CancelPage from "./pages/CancelPage";
 
 export default function App() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get("userId");
+    if (userId) {
+      localStorage.setItem("max_user_id", userId);
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <Layout>

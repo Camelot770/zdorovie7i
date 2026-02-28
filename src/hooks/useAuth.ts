@@ -7,6 +7,16 @@ interface AuthState {
   maxUserId: string | null;
 }
 
+function getMaxUserId(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get("userId");
+  if (fromUrl) {
+    localStorage.setItem("max_user_id", fromUrl);
+    return fromUrl;
+  }
+  return localStorage.getItem("max_user_id");
+}
+
 export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({
     loading: true,
@@ -16,9 +26,14 @@ export function useAuth(): AuthState {
 
   useEffect(() => {
     async function init() {
-      try {
-        const maxUserId = localStorage.getItem("max_user_id") || "anonymous";
+      const maxUserId = getMaxUserId();
 
+      if (!maxUserId) {
+        setState({ loading: false, patientId: null, maxUserId: null });
+        return;
+      }
+
+      try {
         const result = await apiGet<{ patientId: string }>(
           `/auth/patient/${maxUserId}`
         );
@@ -29,7 +44,7 @@ export function useAuth(): AuthState {
           maxUserId,
         });
       } catch {
-        setState((prev) => ({ ...prev, loading: false }));
+        setState({ loading: false, patientId: null, maxUserId });
       }
     }
 
