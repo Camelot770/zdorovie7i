@@ -105,6 +105,28 @@ export interface Appointment {
   services?: RecordService[];
 }
 
+export interface Service {
+  id: string;
+  name: string;
+  article?: string;
+  fullName?: string;
+  tags?: string;
+  price?: number;
+  description?: string;
+  preparation?: string;
+  turnaroundTime?: string;
+}
+
+export interface Patient {
+  id: string;
+  lastName: string;
+  firstName: string;
+  middleName?: string;
+  gender?: string;
+  birthDate?: string;
+  contacts?: Contact[];
+}
+
 export interface BookingData {
   clinicId: string;
   doctorId: string;
