@@ -40,12 +40,13 @@ export default function Layout({ children }: { children: ReactNode }) {
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
-          <div className={`flex-1 flex ${isHome ? "justify-center" : "justify-center"}`}>
+          <div className="flex-1 flex justify-center">
             <img
               src="/logo.png"
               alt="Здоровье семьи"
+              onClick={() => !isHome && navigate("/")}
               className={`transition-all duration-200 ${
-                isHome ? "h-10" : "h-8"
+                isHome ? "h-10" : "h-8 cursor-pointer active:scale-95"
               }`}
             />
           </div>

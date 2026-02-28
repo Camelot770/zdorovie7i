@@ -62,7 +62,7 @@ export default function SuccessPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-white rounded-xl p-4 shadow-card border border-gray-100 text-left max-w-sm mx-auto divide-y divide-gray-50"
+            className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 text-left max-w-sm mx-auto divide-y divide-gray-50"
           >
             {details.map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -85,7 +85,7 @@ export default function SuccessPage() {
         >
           <button
             onClick={handleClose}
-            className="w-full max-w-sm mx-auto flex items-center justify-center gap-2 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 active:scale-[0.98] transition-all"
+            className="w-full max-w-sm mx-auto flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white py-3.5 rounded-xl font-semibold shadow-md shadow-primary-600/30 hover:shadow-lg active:scale-[0.97] transition-all duration-200"
           >
             <Home className="w-4 h-4" />
             Вернуться в чат

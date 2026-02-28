@@ -24,7 +24,7 @@ export default function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-lg mx-auto flex">
         {tabs.map(({ path, label, icon: Icon }) => {
           const active = isActive(path);
@@ -33,12 +33,29 @@ export default function BottomNav() {
               key={path}
               onClick={() => handleNav(path === "/profile" ? "/records" : path)}
               className={clsx(
-                "flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors",
-                active ? "text-primary-600" : "text-gray-400"
+                "flex-1 flex flex-col items-center pt-2 pb-2.5 gap-0.5 transition-all duration-200 relative",
+                active ? "text-primary-600" : "text-gray-400 active:text-gray-500"
               )}
             >
-              <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">{label}</span>
+              {/* Active indicator bar */}
+              <span
+                className={clsx(
+                  "absolute top-0 left-1/2 -translate-x-1/2 h-[3px] rounded-full transition-all duration-300",
+                  active ? "w-8 bg-primary-500" : "w-0 bg-transparent"
+                )}
+              />
+              <span
+                className={clsx(
+                  "flex items-center justify-center w-10 h-7 rounded-xl transition-all duration-200",
+                  active ? "bg-primary-50" : ""
+                )}
+              >
+                <Icon className="w-[22px] h-[22px]" strokeWidth={active ? 2.2 : 1.8} />
+              </span>
+              <span className={clsx(
+                "text-[11px] transition-all duration-200",
+                active ? "font-semibold" : "font-medium"
+              )}>{label}</span>
             </button>
           );
         })}

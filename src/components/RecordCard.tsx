@@ -1,4 +1,4 @@
-import { Calendar, User, Building2, X } from "lucide-react";
+import { Clock, User, Building2, X } from "lucide-react";
 import Badge from "./ui/Badge";
 import type { Appointment } from "../types";
 
@@ -37,23 +37,28 @@ export default function RecordCard({
       : record.status || "Запланирована";
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-card border border-gray-100">
+    <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100">
       <div className="flex justify-between items-start mb-3">
         <div className="space-y-1.5">
-          <p className="flex items-center gap-1.5 font-semibold text-gray-900">
-            <Calendar className="w-4 h-4 text-primary-600 flex-shrink-0" />
-            {dateStr}, {timeStr}
-          </p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-4 h-4 text-primary-600" />
+            </div>
+            <div>
+              <p className="font-bold text-[15px] text-gray-900">{timeStr}</p>
+              <p className="text-xs text-gray-500">{dateStr}</p>
+            </div>
+          </div>
           {doctorName && (
-            <p className="flex items-center gap-1.5 text-sm text-gray-700">
+            <p className="flex items-center gap-1.5 text-sm text-gray-700 ml-10">
               <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              {doctorName}
+              <span className="truncate">{doctorName}</span>
             </p>
           )}
           {clinicName && (
-            <p className="flex items-center gap-1.5 text-xs text-gray-500">
+            <p className="flex items-center gap-1.5 text-xs text-gray-500 ml-10">
               <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              {clinicName}
+              <span className="truncate">{clinicName}</span>
             </p>
           )}
         </div>
@@ -62,7 +67,7 @@ export default function RecordCard({
       {onCancel && record.status === "Запланирована" && (
         <button
           onClick={onCancel}
-          className="w-full flex items-center justify-center gap-1.5 border border-danger-500 text-danger-600 py-2 rounded-lg text-sm font-medium hover:bg-danger-50 active:scale-[0.98] transition-all"
+          className="w-full flex items-center justify-center gap-1.5 border border-danger-200 text-danger-600 py-2.5 rounded-xl text-sm font-medium hover:bg-danger-50 active:scale-[0.97] transition-all duration-200"
         >
           <X className="w-4 h-4" />
           Отменить запись
