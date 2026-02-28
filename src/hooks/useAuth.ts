@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiGet } from "../api/client";
+import { apiGet, apiPost } from "../api/client";
 
 interface AuthState {
   loading: boolean;
@@ -7,30 +7,25 @@ interface AuthState {
   maxUserId: string | null;
 }
 
-/**
- * Resolve MAX user id:
- *  1. WebApp.initDataUnsafe.user.id (MAX mini-app bridge)
- *  2. ?userId= query param (legacy / fallback)
- *  3. localStorage cache
- */
-function getMaxUserId(): string | null {
-  // 1️⃣ MAX Bridge
-  const webAppUserId = window.WebApp?.initDataUnsafe?.user?.id;
-  if (webAppUserId) {
-    const id = String(webAppUserId);
-    localStorage.setItem("max_user_id", id);
-    return id;
-  }
+interface ValidateResponse {
+  valid: boolean;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  patientId: string | null;
+}
 
-  // 2️⃣ URL param (fallback for direct links from bot)
+/**
+ * Fallback: resolve MAX user id from URL params or cache.
+ * Used when WebApp.initData is unavailable (e.g. direct browser access).
+ */
+function getFallbackUserId(): string | null {
   const params = new URLSearchParams(window.location.search);
   const fromUrl = params.get("userId");
   if (fromUrl) {
     localStorage.setItem("max_user_id", fromUrl);
     return fromUrl;
   }
-
-  // 3️⃣ Cached
   return localStorage.getItem("max_user_id");
 }
 
@@ -43,8 +38,30 @@ export function useAuth(): AuthState {
 
   useEffect(() => {
     async function init() {
-      const maxUserId = getMaxUserId();
+      // 1️⃣ Validate initData via backend (secure — HMAC-SHA256)
+      const initData = window.WebApp?.initData;
+      if (initData) {
+        try {
+          const result = await apiPost<ValidateResponse>(
+            "/auth/validate-init-data",
+            { init_data: initData }
+          );
+          if (result.valid && result.userId) {
+            localStorage.setItem("max_user_id", result.userId);
+            setState({
+              loading: false,
+              patientId: result.patientId,
+              maxUserId: result.userId,
+            });
+            return;
+          }
+        } catch {
+          // Validation failed — fall through to legacy methods
+        }
+      }
 
+      // 2️⃣ Fallback: URL param or localStorage
+      const maxUserId = getFallbackUserId();
       if (!maxUserId) {
         setState({ loading: false, patientId: null, maxUserId: null });
         return;
@@ -54,7 +71,6 @@ export function useAuth(): AuthState {
         const result = await apiGet<{ patientId: string }>(
           `/auth/patient/${maxUserId}`
         );
-
         setState({
           loading: false,
           patientId: result.patientId,
