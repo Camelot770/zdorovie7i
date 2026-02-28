@@ -1,7 +1,7 @@
-import type { Record } from "../types";
+import type { Appointment } from "../types";
 
 interface RecordCardProps {
-  record: Record;
+  record: Appointment;
   clinicName?: string;
   doctorName?: string;
   onCancel?: () => void;

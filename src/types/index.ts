@@ -96,7 +96,7 @@ export interface RecordService {
   amount?: number;
 }
 
-export interface Record {
+export interface Appointment {
   id: string;
   createdAt?: string;
   status?: string;

@@ -3,7 +3,7 @@ import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
 import RecordCard from "../components/RecordCard";
-import type { Record } from "../types";
+import type { Appointment } from "../types";
 
 export default function MyRecordsPage() {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function MyRecordsPage() {
     data: records,
     loading,
     error,
-  } = useApi<Record[]>(
+  } = useApi<Appointment[]>(
     () => {
       if (!patientId) return Promise.resolve([]);
       return apiGet("/records", {

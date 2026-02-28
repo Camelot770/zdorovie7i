@@ -1,4 +1,4 @@
-import type { Clinic, Specialization, Doctor, Schedule, Record } from "../types";
+import type { Clinic, Specialization, Doctor, Schedule, Appointment } from "../types";
 
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
@@ -39,9 +39,9 @@ export const api = {
   getDoctors: (params?: Record<string, string>) => apiGet<Doctor[]>("/doctors", params),
   getDoctor: (id: string) => apiGet<Doctor>(`/doctors/${id}`),
   getSchedules: (params?: Record<string, string>) => apiGet<Schedule[]>("/schedules", params),
-  getRecords: (params: Record<string, string>) => apiGet<Record[]>("/records", params),
-  createRecord: (body: unknown) => apiPost<Record>("/records", body),
-  confirmRecord: (id: string) => apiPost<Record>(`/records/${id}/confirm`),
-  cancelRecord: (id: string) => apiPost<Record>(`/records/${id}/cancel`),
+  getRecords: (params: Record<string, string>) => apiGet<Appointment[]>("/records", params),
+  createRecord: (body: unknown) => apiPost<Appointment>("/records", body),
+  confirmRecord: (id: string) => apiPost<Appointment>(`/records/${id}/confirm`),
+  cancelRecord: (id: string) => apiPost<Appointment>(`/records/${id}/cancel`),
   getPatientByUser: (maxUserId: string) => apiGet<{ patientId: string }>(`/auth/patient/${maxUserId}`),
 };
