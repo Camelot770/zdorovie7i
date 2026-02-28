@@ -12,11 +12,13 @@ import CancelPage from "./pages/CancelPage";
 export default function App() {
   useEffect(() => {
     // Signal MAX that the mini-app is ready & expand to full height
-    if (window.WebApp) {
-      window.WebApp.ready();
-      window.WebApp.expand();
-      window.WebApp.setHeaderColor("#2d9f4e");
-      window.WebApp.setBackgroundColor("#f9fafb");
+    try {
+      window.WebApp?.ready?.();
+      window.WebApp?.expand?.();
+      window.WebApp?.setHeaderColor?.("#2d9f4e");
+      window.WebApp?.setBackgroundColor?.("#f9fafb");
+    } catch {
+      // Not inside MAX app — ignore
     }
 
     // Fallback: save userId from URL params (for direct bot links)

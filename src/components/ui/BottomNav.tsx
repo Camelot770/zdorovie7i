@@ -14,7 +14,7 @@ export default function BottomNav() {
   const navigate = useNavigate();
 
   function handleNav(path: string) {
-    window.WebApp?.HapticFeedback?.selectionChanged();
+    try { window.WebApp?.HapticFeedback?.selectionChanged?.(); } catch { /* noop */ }
     navigate(path);
   }
 

@@ -19,11 +19,13 @@ export default function SuccessPage() {
 
   function handleClose() {
     reset();
-    if (window.WebApp?.close) {
-      window.WebApp.close();
-    } else {
+    try {
+      window.WebApp?.close?.();
+    } catch {
       navigate("/");
+      return;
     }
+    navigate("/");
   }
 
   const details = [

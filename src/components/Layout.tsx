@@ -10,18 +10,22 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   // Sync MAX WebApp BackButton with route
   useEffect(() => {
-    const bb = window.WebApp?.BackButton;
-    if (!bb) return;
+    try {
+      const bb = window.WebApp?.BackButton;
+      if (!bb || !bb.show) return;
 
-    if (isHome) {
-      bb.hide();
-    } else {
-      bb.show();
+      if (isHome) {
+        bb.hide();
+      } else {
+        bb.show();
+      }
+
+      const handler = () => navigate(-1);
+      bb.onClick(handler);
+      return () => bb.offClick(handler);
+    } catch {
+      // Not inside MAX app — ignore
     }
-
-    const handler = () => navigate(-1);
-    bb.onClick(handler);
-    return () => bb.offClick(handler);
   }, [isHome, navigate]);
 
   return (
