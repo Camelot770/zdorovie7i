@@ -1,6 +1,7 @@
-import { Briefcase, MapPin, Calendar, ArrowRight } from "lucide-react";
+import { Briefcase, MapPin, Calendar, ArrowRight, Heart } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import Badge from "./ui/Badge";
+import { useFavoritesStore } from "../store/favorites";
 import type { Doctor } from "../types";
 
 interface DoctorCardProps {
@@ -24,12 +25,33 @@ export default function DoctorCard({
       .filter(Boolean)
       .join(" ");
 
+  const { isFavorite, toggle } = useFavoritesStore();
+  const fav = isFavorite(doctor.id);
+
+  function handleFav(e: React.MouseEvent) {
+    e.stopPropagation();
+    try { window.WebApp?.HapticFeedback?.impactOccurred?.("light"); } catch { /* noop */ }
+    toggle({ id: doctor.id, name });
+  }
+
   return (
     <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 hover:shadow-card-hover transition-all duration-200">
       <div className="flex gap-3.5">
         <Avatar name={name} size="md" />
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-[15px] text-gray-900 truncate">{name}</h3>
+          <div className="flex items-start justify-between">
+            <h3 className="font-bold text-[15px] text-gray-900 truncate flex-1">{name}</h3>
+            <button
+              onClick={handleFav}
+              className="ml-2 p-1.5 -mr-1 -mt-1 rounded-lg hover:bg-gray-50 active:scale-90 transition-all"
+            >
+              <Heart
+                className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                  fav ? "fill-rose-500 text-rose-500" : "text-gray-300"
+                }`}
+              />
+            </button>
+          </div>
           {specializationName && (
             <div className="mt-1">
               <Badge variant="neutral">{specializationName}</Badge>

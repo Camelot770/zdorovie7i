@@ -8,6 +8,7 @@ import ConfirmPage from "./pages/ConfirmPage";
 import SuccessPage from "./pages/SuccessPage";
 import MyRecordsPage from "./pages/MyRecordsPage";
 import CancelPage from "./pages/CancelPage";
+import ProfilePage from "./pages/ProfilePage";
 
 export default function App() {
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/success" element={<SuccessPage />} />
           <Route path="/records" element={<MyRecordsPage />} />
           <Route path="/cancel/:recordId" element={<CancelPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

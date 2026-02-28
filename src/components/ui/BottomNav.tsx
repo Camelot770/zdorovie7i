@@ -31,7 +31,7 @@ export default function BottomNav() {
           return (
             <button
               key={path}
-              onClick={() => handleNav(path === "/profile" ? "/records" : path)}
+              onClick={() => handleNav(path)}
               className={clsx(
                 "flex-1 flex flex-col items-center pt-2 pb-2.5 gap-0.5 transition-all duration-200 relative",
                 active ? "text-primary-600" : "text-gray-400 active:text-gray-500"
