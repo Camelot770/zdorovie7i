@@ -1,3 +1,6 @@
+import { CalendarX2, Clock } from "lucide-react";
+import clsx from "clsx";
+import EmptyState from "./ui/EmptyState";
 import type { AppointmentSlot } from "../types";
 
 interface TimeSlotsProps {
@@ -15,14 +18,16 @@ export default function TimeSlots({
 
   if (available.length === 0) {
     return (
-      <p className="text-sm text-gray-500 text-center py-4">
-        Нет доступных слотов на выбранную дату
-      </p>
+      <EmptyState
+        icon={CalendarX2}
+        title="Нет доступных слотов"
+        description="На выбранную дату нет свободного времени"
+      />
     );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {available.map((slot) => {
         const time = slot.startAt.slice(11, 16);
         const isSelected = slot.startAt === selectedTime;
@@ -31,12 +36,14 @@ export default function TimeSlots({
           <button
             key={slot.startAt}
             onClick={() => onSelect(slot)}
-            className={`py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={clsx(
+              "flex items-center justify-center gap-1 py-3 rounded-lg text-sm font-medium transition-all active:scale-95",
               isSelected
-                ? "bg-primary-600 text-white"
+                ? "bg-primary-600 text-white ring-2 ring-primary-300 ring-offset-1 shadow-sm"
                 : "bg-white border border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50"
-            }`}
+            )}
           >
+            {isSelected && <Clock className="w-3.5 h-3.5" />}
             {time}
           </button>
         );

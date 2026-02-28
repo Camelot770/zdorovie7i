@@ -1,3 +1,5 @@
+import { Building2 } from "lucide-react";
+import CustomSelect from "./ui/CustomSelect";
 import type { Clinic } from "../types";
 
 interface ClinicSelectProps {
@@ -13,27 +15,23 @@ export default function ClinicSelect({
   onChange,
   loading,
 }: ClinicSelectProps) {
+  const options = [
+    { value: "", label: "Все филиалы" },
+    ...clinics.map((c) => ({
+      value: c.id,
+      label: c.shortAddress || c.name,
+    })),
+  ];
+
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Филиал
-      </label>
-      <select
-        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        value={value}
-        onChange={(e) => {
-          const clinic = clinics.find((c) => c.id === e.target.value);
-          onChange(e.target.value, clinic?.shortAddress || clinic?.name || "");
-        }}
-        disabled={loading}
-      >
-        <option value="">Все филиалы</option>
-        {clinics.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.shortAddress || c.name}
-          </option>
-        ))}
-      </select>
-    </div>
+    <CustomSelect
+      label="Филиал"
+      placeholder="Все филиалы"
+      options={options}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      icon={<Building2 className="w-4 h-4" />}
+    />
   );
 }

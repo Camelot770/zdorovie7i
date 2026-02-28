@@ -1,8 +1,13 @@
 import { useNavigate } from "react-router-dom";
+import { CalendarPlus, Shield, AlertCircle } from "lucide-react";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
 import RecordCard from "../components/RecordCard";
+import PageTransition from "../components/ui/PageTransition";
+import SkeletonList from "../components/ui/SkeletonList";
+import EmptyState from "../components/ui/EmptyState";
+import Badge from "../components/ui/Badge";
 import type { Appointment } from "../types";
 
 export default function MyRecordsPage() {
@@ -28,75 +33,51 @@ export default function MyRecordsPage() {
     [patientId]
   );
 
-  if (authLoading || loading) {
-    return (
-      <div className="text-center py-8 text-gray-500">Загрузка записей...</div>
-    );
-  }
-
-  if (!patientId) {
-    return (
-      <div className="text-center py-8 space-y-4">
-        <p className="text-gray-500">
-          Для просмотра записей необходимо авторизоваться через бот.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="text-primary-600 text-sm"
-        >
-          На главную
-        </button>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-500 mb-4">Ошибка загрузки записей</p>
-        <button
-          onClick={() => navigate("/")}
-          className="text-primary-600 text-sm"
-        >
-          На главную
-        </button>
-      </div>
-    );
-  }
-
   const list = Array.isArray(records) ? records : [];
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Мои записи</h2>
-        <button
-          onClick={() => navigate("/")}
-          className="text-sm text-primary-600"
-        >
-          На главную
-        </button>
-      </div>
-
-      {list.length === 0 ? (
-        <div className="text-center py-8 space-y-4">
-          <p className="text-gray-500">Предстоящих записей нет</p>
-          <button
-            onClick={() => navigate("/")}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg text-sm"
-          >
-            Записаться на приём
-          </button>
+    <PageTransition>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Мои записи</h2>
+          {list.length > 0 && (
+            <Badge variant="neutral">Записей: {list.length}</Badge>
+          )}
         </div>
-      ) : (
-        list.map((record) => (
-          <RecordCard
-            key={record.id}
-            record={record}
-            onCancel={() => navigate(`/cancel/${record.id}`)}
+
+        {authLoading || loading ? (
+          <SkeletonList count={3} />
+        ) : !patientId ? (
+          <EmptyState
+            icon={Shield}
+            title="Требуется авторизация"
+            description="Для просмотра записей необходимо авторизоваться через бот"
+            action={{ label: "На главную", onClick: () => navigate("/") }}
           />
-        ))
-      )}
-    </div>
+        ) : error ? (
+          <EmptyState
+            icon={AlertCircle}
+            title="Ошибка загрузки"
+            description="Не удалось загрузить список записей"
+            action={{ label: "На главную", onClick: () => navigate("/") }}
+          />
+        ) : list.length === 0 ? (
+          <EmptyState
+            icon={CalendarPlus}
+            title="Нет предстоящих записей"
+            description="У вас пока нет записей на ближайшее время"
+            action={{ label: "Записаться на приём", onClick: () => navigate("/") }}
+          />
+        ) : (
+          list.map((record) => (
+            <RecordCard
+              key={record.id}
+              record={record}
+              onCancel={() => navigate(`/cancel/${record.id}`)}
+            />
+          ))
+        )}
+      </div>
+    </PageTransition>
   );
 }

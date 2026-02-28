@@ -1,10 +1,14 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import Calendar from "../components/Calendar";
 import TimeSlots from "../components/TimeSlots";
+import PageTransition from "../components/ui/PageTransition";
+import Avatar from "../components/ui/Avatar";
+import SkeletonCard from "../components/ui/SkeletonCard";
 import type { Schedule, AppointmentSlot } from "../types";
 
 export default function SlotsPage() {
@@ -31,8 +35,7 @@ export default function SlotsPage() {
     const list = Array.isArray(schedules) ? schedules : [];
     for (const s of list) {
       if (s.isBusy) continue;
-      const slots = s.appointmentSlots || [];
-      for (const slot of slots) {
+      for (const slot of s.appointmentSlots || []) {
         if (slot.isEmpty) {
           dates.add(slot.startAt.slice(0, 10));
         }
@@ -62,50 +65,55 @@ export default function SlotsPage() {
     navigate("/confirm");
   }
 
-  if (loading) {
-    return (
-      <div className="text-center py-8 text-gray-500">
-        Загрузка расписания...
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">
-          {doctorName || "Выбор даты"}
-        </h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-primary-600"
-        >
-          Назад
-        </button>
+    <PageTransition>
+      <div className="space-y-4">
+        {doctorName && (
+          <div className="flex items-center gap-3">
+            <Avatar name={doctorName} size="md" />
+            <h2 className="text-lg font-semibold text-gray-900">{doctorName}</h2>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="space-y-3">
+            <SkeletonCard lines={5} />
+            <SkeletonCard lines={5} />
+          </div>
+        ) : (
+          <>
+            <Calendar
+              availableDates={availableDates}
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+            />
+
+            <AnimatePresence>
+              {selectedDate && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h3 className="font-medium text-gray-800 mb-2">
+                    Время на{" "}
+                    {new Date(selectedDate).toLocaleDateString("ru-RU", {
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </h3>
+                  <TimeSlots
+                    slots={daySlots}
+                    selectedTime=""
+                    onSelect={handleSlotSelect}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
       </div>
-
-      <Calendar
-        availableDates={availableDates}
-        selectedDate={selectedDate}
-        onSelect={setSelectedDate}
-      />
-
-      {selectedDate && (
-        <div>
-          <h3 className="font-medium text-gray-800 mb-2">
-            Время на{" "}
-            {new Date(selectedDate).toLocaleDateString("ru-RU", {
-              day: "numeric",
-              month: "long",
-            })}
-          </h3>
-          <TimeSlots
-            slots={daySlots}
-            selectedTime=""
-            onSelect={handleSlotSelect}
-          />
-        </div>
-      )}
-    </div>
+    </PageTransition>
   );
 }

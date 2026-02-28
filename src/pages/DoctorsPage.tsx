@@ -1,8 +1,13 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { UserX, AlertCircle } from "lucide-react";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import DoctorCard from "../components/DoctorCard";
+import PageTransition from "../components/ui/PageTransition";
+import SkeletonList from "../components/ui/SkeletonList";
+import EmptyState from "../components/ui/EmptyState";
+import Badge from "../components/ui/Badge";
 import type { Doctor } from "../types";
 
 export default function DoctorsPage() {
@@ -31,64 +36,50 @@ export default function DoctorsPage() {
         .join(" ");
 
     setDoctorId(doctor.id, name);
-
-    if (clinicId) {
-      setClinicId(clinicId);
-    }
-    if (specializationId) {
-      setSpecializationId(specializationId);
-    }
+    if (clinicId) setClinicId(clinicId);
+    if (specializationId) setSpecializationId(specializationId);
 
     navigate(`/slots/${doctor.id}`);
-  }
-
-  if (loading) {
-    return (
-      <div className="text-center py-8 text-gray-500">Загрузка врачей...</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-500 mb-4">Ошибка загрузки</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-primary-600 text-sm"
-        >
-          Назад
-        </button>
-      </div>
-    );
   }
 
   const list = Array.isArray(doctors) ? doctors : [];
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Врачи</h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-primary-600"
-        >
-          Назад
-        </button>
-      </div>
+    <PageTransition>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Врачи</h2>
+          {list.length > 0 && (
+            <Badge variant="neutral">Найдено: {list.length}</Badge>
+          )}
+        </div>
 
-      {list.length === 0 ? (
-        <p className="text-center text-gray-500 py-8">
-          Врачи не найдены. Попробуйте изменить фильтры.
-        </p>
-      ) : (
-        list.map((doctor) => (
-          <DoctorCard
-            key={doctor.id}
-            doctor={doctor}
-            onBook={() => handleBook(doctor)}
+        {loading ? (
+          <SkeletonList count={4} showAvatar />
+        ) : error ? (
+          <EmptyState
+            icon={AlertCircle}
+            title="Ошибка загрузки"
+            description="Не удалось загрузить список врачей"
+            action={{ label: "Назад", onClick: () => navigate(-1) }}
           />
-        ))
-      )}
-    </div>
+        ) : list.length === 0 ? (
+          <EmptyState
+            icon={UserX}
+            title="Врачи не найдены"
+            description="Попробуйте изменить параметры поиска"
+            action={{ label: "Изменить фильтры", onClick: () => navigate(-1) }}
+          />
+        ) : (
+          list.map((doctor) => (
+            <DoctorCard
+              key={doctor.id}
+              doctor={doctor}
+              onBook={() => handleBook(doctor)}
+            />
+          ))
+        )}
+      </div>
+    </PageTransition>
   );
 }

@@ -3,10 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
+import { Search, Activity } from "lucide-react";
 import AgeToggle from "../components/AgeToggle";
 import ClinicSelect from "../components/ClinicSelect";
 import SpecializationSelect from "../components/SpecializationSelect";
 import DoctorSearch from "../components/DoctorSearch";
+import PageTransition from "../components/ui/PageTransition";
+import SkeletonCard from "../components/ui/SkeletonCard";
 import type { Clinic, Specialization, Doctor } from "../types";
 
 export default function MainPage() {
@@ -63,44 +66,56 @@ export default function MainPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900">Запись на приём</h2>
+    <PageTransition>
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl p-4 shadow-card border border-gray-100 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+            <Activity className="w-5 h-5 text-primary-600" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Запись на приём</h2>
+            <p className="text-xs text-gray-500">Выберите параметры для поиска врача</p>
+          </div>
+        </div>
 
-      <AgeToggle isChild={isChild} onChange={setIsChild} />
+        <AgeToggle isChild={isChild} onChange={setIsChild} />
 
-      <ClinicSelect
-        clinics={clinics || []}
-        value={clinicId}
-        onChange={setClinicId}
-        loading={clinicsLoading}
-      />
+        {clinicsLoading ? (
+          <SkeletonCard lines={2} />
+        ) : (
+          <ClinicSelect
+            clinics={clinics || []}
+            value={clinicId}
+            onChange={setClinicId}
+            loading={clinicsLoading}
+          />
+        )}
 
-      <SpecializationSelect
-        specializations={specializations || []}
-        value={specializationId}
-        onChange={setSpecializationId}
-        loading={specsLoading}
-      />
+        {specsLoading ? (
+          <SkeletonCard lines={2} />
+        ) : (
+          <SpecializationSelect
+            specializations={specializations || []}
+            value={specializationId}
+            onChange={setSpecializationId}
+            loading={specsLoading}
+          />
+        )}
 
-      <DoctorSearch
-        clinicId={clinicId}
-        specializationId={specializationId}
-        onSelect={handleDoctorSelect}
-      />
+        <DoctorSearch
+          clinicId={clinicId}
+          specializationId={specializationId}
+          onSelect={handleDoctorSelect}
+        />
 
-      <button
-        onClick={handleSearch}
-        className="w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
-      >
-        Найти врачей
-      </button>
-
-      <button
-        onClick={() => navigate("/records")}
-        className="w-full border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-      >
-        Мои записи
-      </button>
-    </div>
+        <button
+          onClick={handleSearch}
+          className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 active:scale-[0.98] transition-all"
+        >
+          <Search className="w-4 h-4" />
+          Найти врачей
+        </button>
+      </div>
+    </PageTransition>
   );
 }

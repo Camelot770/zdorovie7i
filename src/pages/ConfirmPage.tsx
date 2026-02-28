@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { User, Stethoscope, Calendar, Building2, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { apiPost } from "../api/client";
 import { useBookingStore } from "../store/booking";
 import { useAuth } from "../hooks/useAuth";
+import PageTransition from "../components/ui/PageTransition";
 
 export default function ConfirmPage() {
   const navigate = useNavigate();
@@ -58,56 +60,62 @@ export default function ConfirmPage() {
     }
   }
 
+  const details = [
+    { icon: User, label: "Врач", value: doctorName },
+    { icon: Stethoscope, label: "Специальность", value: specializationName },
+    { icon: Calendar, label: "Дата и время", value: dateStr ? `${dateStr}, ${timeStr}` : null },
+    { icon: Building2, label: "Филиал", value: clinicName },
+  ].filter((d) => d.value);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Подтверждение записи
-        </h2>
+    <PageTransition>
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl p-4 shadow-card border border-gray-100 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="w-5 h-5 text-primary-600" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Подтверждение записи</h2>
+            <p className="text-xs text-gray-500">Проверьте данные перед записью</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-card border border-gray-100 divide-y divide-gray-50">
+          {details.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+              <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Icon className="w-4 h-4 text-gray-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500">{label}</p>
+                <p className="font-medium text-gray-900 text-sm">{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 bg-danger-50 text-danger-700 text-sm p-3 rounded-lg">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
         <button
-          onClick={() => navigate(-1)}
-          className="text-sm text-primary-600"
+          onClick={handleConfirm}
+          disabled={submitting}
+          className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 active:scale-[0.98] disabled:opacity-50 transition-all"
         >
-          Назад
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Создаём запись...
+            </>
+          ) : (
+            "Подтвердить запись"
+          )}
         </button>
       </div>
-
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-3">
-        <div>
-          <p className="text-xs text-gray-500">Врач</p>
-          <p className="font-medium text-gray-900">{doctorName || "—"}</p>
-        </div>
-        {specializationName && (
-          <div>
-            <p className="text-xs text-gray-500">Специальность</p>
-            <p className="text-gray-900">{specializationName}</p>
-          </div>
-        )}
-        <div>
-          <p className="text-xs text-gray-500">Дата и время</p>
-          <p className="font-medium text-gray-900">
-            {dateStr}, {timeStr}
-          </p>
-        </div>
-        {clinicName && (
-          <div>
-            <p className="text-xs text-gray-500">Филиал</p>
-            <p className="text-gray-900">{clinicName}</p>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <p className="text-red-500 text-sm text-center">{error}</p>
-      )}
-
-      <button
-        onClick={handleConfirm}
-        disabled={submitting}
-        className="w-full bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
-      >
-        {submitting ? "Создаём запись..." : "Подтвердить запись"}
-      </button>
-    </div>
+    </PageTransition>
   );
 }

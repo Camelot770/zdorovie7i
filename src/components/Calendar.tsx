@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import clsx from "clsx";
 
 interface CalendarProps {
   availableDates: Set<string>;
@@ -49,16 +50,18 @@ export default function Calendar({
     return d.toISOString().split("T")[0];
   }
 
+  const todayStr = formatDate(today);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {months.map(({ year, month, days }) => (
-        <div key={`${year}-${month}`}>
-          <h3 className="text-center font-semibold text-gray-800 mb-2">
+        <div key={`${year}-${month}`} className="bg-white rounded-xl p-3 shadow-card border border-gray-100">
+          <h3 className="text-center font-semibold text-gray-800 mb-3">
             {monthNames[month]} {year}
           </h3>
           <div className="grid grid-cols-7 gap-1 text-center">
             {weekDays.map((wd) => (
-              <div key={wd} className="text-xs text-gray-400 font-medium py-1">
+              <div key={wd} className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-1">
                 {wd}
               </div>
             ))}
@@ -68,25 +71,27 @@ export default function Calendar({
               const isPast = day < today;
               const isAvailable = availableDates.has(ds) && !isPast;
               const isSelected = ds === selectedDate;
+              const isToday = ds === todayStr;
 
               return (
                 <button
                   key={i}
                   disabled={!isAvailable}
                   onClick={() => isAvailable && onSelect(ds)}
-                  className={`py-1.5 rounded-lg text-sm transition-colors ${
-                    !isCurrentMonth
-                      ? "text-gray-200"
-                      : isSelected
-                        ? "bg-primary-600 text-white font-bold"
-                        : isAvailable
-                          ? "bg-primary-50 text-primary-700 hover:bg-primary-100 font-medium"
-                          : isPast
-                            ? "text-gray-300"
-                            : "text-gray-400"
-                  }`}
+                  className={clsx(
+                    "relative min-h-[40px] rounded-lg text-sm transition-all flex flex-col items-center justify-center",
+                    !isCurrentMonth && "text-gray-200",
+                    isCurrentMonth && isSelected && "bg-primary-600 text-white font-bold shadow-sm",
+                    isCurrentMonth && !isSelected && isAvailable && "bg-primary-50 text-primary-700 hover:bg-primary-100 font-medium active:scale-90",
+                    isCurrentMonth && !isSelected && !isAvailable && isPast && "text-gray-300",
+                    isCurrentMonth && !isSelected && !isAvailable && !isPast && "text-gray-400",
+                    isToday && !isSelected && "ring-1 ring-primary-300"
+                  )}
                 >
                   {day.getDate()}
+                  {isAvailable && !isSelected && (
+                    <span className="absolute bottom-1 w-1 h-1 rounded-full bg-primary-500" />
+                  )}
                 </button>
               );
             })}

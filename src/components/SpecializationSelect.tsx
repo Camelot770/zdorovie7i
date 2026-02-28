@@ -1,3 +1,5 @@
+import { Stethoscope } from "lucide-react";
+import CustomSelect from "./ui/CustomSelect";
 import type { Specialization } from "../types";
 
 interface SpecializationSelectProps {
@@ -13,27 +15,23 @@ export default function SpecializationSelect({
   onChange,
   loading,
 }: SpecializationSelectProps) {
+  const options = [
+    { value: "", label: "Все специальности" },
+    ...specializations.map((s) => ({
+      value: s.id,
+      label: s.name,
+    })),
+  ];
+
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Специальность
-      </label>
-      <select
-        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        value={value}
-        onChange={(e) => {
-          const spec = specializations.find((s) => s.id === e.target.value);
-          onChange(e.target.value, spec?.name || "");
-        }}
-        disabled={loading}
-      >
-        <option value="">Все специальности</option>
-        {specializations.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
-    </div>
+    <CustomSelect
+      label="Специальность"
+      placeholder="Все специальности"
+      options={options}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      icon={<Stethoscope className="w-4 h-4" />}
+    />
   );
 }
