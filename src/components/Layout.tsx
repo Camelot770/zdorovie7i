@@ -30,20 +30,26 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-primary-600 text-white px-4 py-3 shadow-sm">
-        <div className="max-w-lg mx-auto flex items-center">
+      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
+        <div className="max-w-lg mx-auto flex items-center px-4 py-2">
           {!isHome && (
             <button
               onClick={() => navigate(-1)}
-              className="mr-2 -ml-1 p-1 rounded-lg hover:bg-primary-500 transition-colors"
+              className="mr-2 -ml-1 p-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-primary-600"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
-          <h1 className="text-lg font-semibold flex-1 text-center">
-            Здоровье семьи
-          </h1>
-          {!isHome && <div className="w-7" />}
+          <div className={`flex-1 flex ${isHome ? "justify-center" : "justify-center"}`}>
+            <img
+              src="/logo.png"
+              alt="Здоровье семьи"
+              className={`transition-all duration-200 ${
+                isHome ? "h-10" : "h-8"
+              }`}
+            />
+          </div>
+          {!isHome && <div className="w-9" />}
         </div>
       </header>
       <main className="max-w-lg mx-auto px-4 py-4 pb-24">{children}</main>

@@ -15,7 +15,7 @@ export default function App() {
     try {
       window.WebApp?.ready?.();
       window.WebApp?.expand?.();
-      window.WebApp?.setHeaderColor?.("#2d9f4e");
+      window.WebApp?.setHeaderColor?.("#ffffff");
       window.WebApp?.setBackgroundColor?.("#f9fafb");
     } catch {
       // Not inside MAX app — ignore
