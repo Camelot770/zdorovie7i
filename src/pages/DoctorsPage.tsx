@@ -10,7 +10,43 @@ import SkeletonList from "../components/ui/SkeletonList";
 import EmptyState from "../components/ui/EmptyState";
 import PullToRefresh from "../components/ui/PullToRefresh";
 import Badge from "../components/ui/Badge";
-import type { Doctor } from "../types";
+import type { Doctor, Clinic, Specialization } from "../types";
+
+/** Extract first specialization name for a doctor, given a specializations map. */
+function getSpecName(
+  doctor: Doctor,
+  specsMap: Record<string, string>,
+  filterSpecId?: string
+): string {
+  for (const cl of doctor.clinics || []) {
+    for (const sp of cl.specializations || []) {
+      if (filterSpecId && sp.specializationId === filterSpecId) {
+        return specsMap[sp.specializationId] || "";
+      }
+      if (!filterSpecId && specsMap[sp.specializationId]) {
+        return specsMap[sp.specializationId];
+      }
+    }
+  }
+  return "";
+}
+
+/** Extract clinic name for a doctor, given a clinics map. */
+function getClinicName(
+  doctor: Doctor,
+  clinicsMap: Record<string, string>,
+  filterClinicId?: string
+): string {
+  for (const cl of doctor.clinics || []) {
+    if (filterClinicId && cl.clinicId === filterClinicId) {
+      return clinicsMap[cl.clinicId] || "";
+    }
+    if (!filterClinicId && clinicsMap[cl.clinicId]) {
+      return clinicsMap[cl.clinicId];
+    }
+  }
+  return "";
+}
 
 export default function DoctorsPage() {
   const navigate = useNavigate();
@@ -23,19 +59,39 @@ export default function DoctorsPage() {
   const { setDoctorId, setClinicId, setSpecializationId } = useBookingStore();
   const { favorites } = useFavoritesStore();
 
+  // Fetch doctors
   const { data: doctors, loading, error, refetch } = useApi<Doctor[]>(() => {
     if (showFavorites) {
-      // Load all doctors, we'll filter client-side
       if (favorites.length === 0) return Promise.resolve([]);
-      return apiGet("/doctors", { include: "description,specializations" });
+      return apiGet("/doctors", { include: "description,specializations,services" });
     }
     const params: Record<string, string> = {
-      include: "description,specializations",
+      include: "description,specializations,services",
     };
     if (clinicId) params.clinicId = clinicId;
     if (specializationId) params.specializationId = specializationId;
     return apiGet("/doctors", params);
   }, [clinicId, specializationId, showFavorites]);
+
+  // Fetch clinics + specializations for labels
+  const { data: clinicsData } = useApi<Clinic[]>(
+    () => apiGet("/clinics"),
+    []
+  );
+  const { data: specsData } = useApi<Specialization[]>(
+    () => apiGet("/specializations"),
+    []
+  );
+
+  const clinicsMap: Record<string, string> = {};
+  (clinicsData || []).forEach((c) => {
+    clinicsMap[c.id] = c.shortAddress || c.name;
+  });
+
+  const specsMap: Record<string, string> = {};
+  (specsData || []).forEach((s) => {
+    specsMap[s.id] = s.name;
+  });
 
   function handleBook(doctor: Doctor) {
     const name =
@@ -102,6 +158,8 @@ export default function DoctorsPage() {
               <DoctorCard
                 key={doctor.id}
                 doctor={doctor}
+                specializationName={getSpecName(doctor, specsMap, specializationId || undefined)}
+                clinicName={getClinicName(doctor, clinicsMap, clinicId || undefined)}
                 onBook={() => handleBook(doctor)}
               />
             ))

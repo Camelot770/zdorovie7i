@@ -1,4 +1,4 @@
-import { Briefcase, MapPin, Calendar, ArrowRight, Heart } from "lucide-react";
+import { Briefcase, MapPin, Calendar, ArrowRight, Heart, Shield, Banknote } from "lucide-react";
 import Avatar from "./ui/Avatar";
 import Badge from "./ui/Badge";
 import { useFavoritesStore } from "../store/favorites";
@@ -9,6 +9,7 @@ interface DoctorCardProps {
   specializationName?: string;
   clinicName?: string;
   nearestDate?: string;
+  price?: number;
   onBook: () => void;
 }
 
@@ -17,6 +18,7 @@ export default function DoctorCard({
   specializationName,
   clinicName,
   nearestDate,
+  price,
   onBook,
 }: DoctorCardProps) {
   const name =
@@ -52,11 +54,17 @@ export default function DoctorCard({
               />
             </button>
           </div>
-          {specializationName && (
-            <div className="mt-1">
+          <div className="mt-1 flex flex-wrap gap-1">
+            {specializationName && (
               <Badge variant="neutral">{specializationName}</Badge>
-            </div>
-          )}
+            )}
+            {doctor.dms && (
+              <Badge variant="success">
+                <Shield className="w-3 h-3 mr-0.5" />
+                ДМС
+              </Badge>
+            )}
+          </div>
           <div className="mt-2.5 space-y-1">
             {doctor.experience != null && (
               <p className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -68,6 +76,12 @@ export default function DoctorCard({
               <p className="flex items-center gap-1.5 text-xs text-gray-500">
                 <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
                 <span className="truncate">{clinicName}</span>
+              </p>
+            )}
+            {price != null && price > 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-primary-700 font-medium">
+                <Banknote className="w-3.5 h-3.5 flex-shrink-0" />
+                Приём от {price} ₽
               </p>
             )}
             {nearestDate && (
