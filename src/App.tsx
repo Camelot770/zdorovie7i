@@ -11,6 +11,15 @@ import CancelPage from "./pages/CancelPage";
 
 export default function App() {
   useEffect(() => {
+    // Signal MAX that the mini-app is ready & expand to full height
+    if (window.WebApp) {
+      window.WebApp.ready();
+      window.WebApp.expand();
+      window.WebApp.setHeaderColor("#2d9f4e");
+      window.WebApp.setBackgroundColor("#f9fafb");
+    }
+
+    // Fallback: save userId from URL params (for direct bot links)
     const params = new URLSearchParams(window.location.search);
     const userId = params.get("userId");
     if (userId) {

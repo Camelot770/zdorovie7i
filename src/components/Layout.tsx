@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import BottomNav from "./ui/BottomNav";
@@ -7,6 +7,22 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
+
+  // Sync MAX WebApp BackButton with route
+  useEffect(() => {
+    const bb = window.WebApp?.BackButton;
+    if (!bb) return;
+
+    if (isHome) {
+      bb.hide();
+    } else {
+      bb.show();
+    }
+
+    const handler = () => navigate(-1);
+    bb.onClick(handler);
+    return () => bb.offClick(handler);
+  }, [isHome, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">

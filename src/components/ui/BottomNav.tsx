@@ -13,11 +13,9 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const userId = localStorage.getItem("max_user_id") || "";
-
   function handleNav(path: string) {
-    const url = userId ? `${path}?userId=${userId}` : path;
-    navigate(url);
+    window.WebApp?.HapticFeedback?.selectionChanged();
+    navigate(path);
   }
 
   function isActive(path: string) {
