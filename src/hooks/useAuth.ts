@@ -5,6 +5,7 @@ interface AuthState {
   loading: boolean;
   patientId: string | null;
   maxUserId: string | null;
+  setPatientId: (id: string) => void;
 }
 
 interface ValidateResponse {
@@ -30,11 +31,15 @@ function getFallbackUserId(): string | null {
 }
 
 export function useAuth(): AuthState {
-  const [state, setState] = useState<AuthState>({
+  const [state, setState] = useState<Omit<AuthState, "setPatientId">>({
     loading: true,
     patientId: null,
     maxUserId: null,
   });
+
+  function setPatientId(id: string) {
+    setState((prev) => ({ ...prev, patientId: id }));
+  }
 
   useEffect(() => {
     async function init() {
@@ -84,5 +89,5 @@ export function useAuth(): AuthState {
     init();
   }, []);
 
-  return state;
+  return { ...state, setPatientId };
 }
