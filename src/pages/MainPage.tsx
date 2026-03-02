@@ -4,7 +4,6 @@ import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { Search, HeartPulse } from "lucide-react";
-import AgeToggle from "../components/AgeToggle";
 import ClinicSelect from "../components/ClinicSelect";
 import SpecializationSelect from "../components/SpecializationSelect";
 import DoctorSearch from "../components/DoctorSearch";
@@ -17,10 +16,8 @@ export default function MainPage() {
   const [searchParams] = useSearchParams();
 
   const {
-    isChild,
     clinicId,
     specializationId,
-    setIsChild,
     setClinicId,
     setSpecializationId,
     setDoctorId,
@@ -32,8 +29,8 @@ export default function MainPage() {
   );
 
   const { data: specializations, loading: specsLoading } = useApi<Specialization[]>(
-    () => apiGet("/specializations", isChild ? { age: "true" } : {}),
-    [isChild]
+    () => apiGet("/specializations"),
+    []
   );
 
   useEffect(() => {
@@ -61,7 +58,6 @@ export default function MainPage() {
     const params = new URLSearchParams();
     if (clinicId) params.set("clinicId", clinicId);
     if (specializationId) params.set("specializationId", specializationId);
-    if (isChild) params.set("isChild", "true");
     navigate(`/doctors?${params.toString()}`);
   }
 
@@ -80,8 +76,6 @@ export default function MainPage() {
             <p className="text-[12px] text-white/80 mt-0.5">Выберите параметры для поиска врача</p>
           </div>
         </div>
-
-        <AgeToggle isChild={isChild} onChange={setIsChild} />
 
         {clinicsLoading ? (
           <SkeletonCard lines={2} />

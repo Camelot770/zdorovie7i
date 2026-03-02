@@ -165,8 +165,8 @@ export default function ProfilePage() {
     {
       icon: Phone,
       label: "Контакт-центр",
-      sublabel: "+7 (843) 240-60-70",
-      onClick: () => { try { window.open("tel:+78432406070"); } catch { /* noop */ } },
+      sublabel: "+7 (843) 204-27-00",
+      onClick: () => { try { window.open("tel:+78432042700"); } catch { /* noop */ } },
       color: "text-blue-500",
       bg: "bg-blue-50",
     },
