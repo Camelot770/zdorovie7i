@@ -10,6 +10,8 @@ import {
   Stethoscope,
   UserPlus,
   Loader2,
+  Unlink,
+  User,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useFavoritesStore } from "../store/favorites";
@@ -40,10 +42,11 @@ const emptyForm: RegisterForm = {
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { patientId, maxUserId, loading, setPatientId } = useAuth();
+  const { patientId, patientName, maxUserId, loading, setPatientId, resetPatient } = useAuth();
   const { favorites } = useFavoritesStore();
 
   const [showRegister, setShowRegister] = useState(false);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [form, setForm] = useState<RegisterForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -116,10 +119,26 @@ export default function ProfilePage() {
           phone: form.phone,
         }
       );
-      setPatientId(result.patientId);
+      setPatientId(result.patientId, result.fullName);
       setShowRegister(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Ошибка регистрации";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleUnlink() {
+    setSubmitting(true);
+    setError("");
+    try {
+      await apiPost("/auth/unlink", { max_user_id: maxUserId });
+      resetPatient();
+      setShowUnlinkConfirm(false);
+      setForm(emptyForm);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Ошибка отвязки";
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -167,14 +186,22 @@ export default function ProfilePage() {
         {/* User card */}
         <div className="bg-white rounded-2xl p-5 shadow-card border border-gray-100">
           <div className="flex items-center gap-4">
-            <Avatar name={fullName} size="lg" />
+            <Avatar name={patientName || fullName} size="lg" />
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-gray-900 truncate">{fullName}</h2>
               {patientId ? (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div className="w-2 h-2 rounded-full bg-success-500" />
-                  <span className="text-xs text-success-600 font-medium">Привязан к клинике</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-success-500" />
+                    <span className="text-xs text-success-600 font-medium">Привязан к клинике</span>
+                  </div>
+                  {patientName && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <User className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-500">{patientName}</span>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="flex items-center gap-1.5 mt-1">
                   <div className="w-2 h-2 rounded-full bg-warning-500" />
@@ -184,6 +211,55 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Patient info + unlink */}
+        {patientId && !showUnlinkConfirm && (
+          <button
+            onClick={() => setShowUnlinkConfirm(true)}
+            className="w-full flex items-center gap-3 bg-white rounded-2xl p-4 shadow-card border border-gray-100 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+              <Unlink className="w-5 h-5 text-orange-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900">Сменить данные пациента</p>
+              <p className="text-xs text-gray-500">Отвязать аккаунт и перерегистрироваться</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+          </button>
+        )}
+
+        {/* Unlink confirmation */}
+        {patientId && showUnlinkConfirm && (
+          <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 space-y-3">
+            <p className="text-sm text-orange-800">
+              Вы уверены? Текущая привязка к пациенту{patientName ? ` "${patientName}"` : ""} будет удалена. После этого можно зарегистрироваться заново с правильными данными.
+            </p>
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowUnlinkConfirm(false); setError(""); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleUnlink}
+                disabled={submitting}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60 transition-all"
+              >
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Unlink className="w-4 h-4" />
+                )}
+                {submitting ? "Отвязка..." : "Отвязать"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Registration prompt */}
         {!patientId && !showRegister && (
