@@ -47,6 +47,7 @@ export default function ConfirmPage() {
         doctorId,
         specializationId,
         patientId,
+        serviceIds: "",
       });
       navigate("/success");
     } catch (err) {
