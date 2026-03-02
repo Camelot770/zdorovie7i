@@ -63,8 +63,8 @@ export default function MyRecordsPage() {
             <EmptyState
               icon={AlertCircle}
               title="Ошибка загрузки"
-              description="Не удалось загрузить список записей"
-              action={{ label: "На главную", onClick: () => navigate("/") }}
+              description="Не удалось загрузить список записей. Попробуйте обновить."
+              action={{ label: "Повторить", onClick: refetch }}
             />
           ) : list.length === 0 ? (
             <EmptyState

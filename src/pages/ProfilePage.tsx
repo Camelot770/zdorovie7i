@@ -83,6 +83,24 @@ export default function ProfilePage() {
     setError("");
   }
 
+  function friendlyError(err: unknown, fallback: string): string {
+    if (!(err instanceof Error)) return fallback;
+    const msg = err.message;
+    if (msg.includes("Load failed") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      return "Нет связи с сервером. Проверьте интернет и попробуйте снова.";
+    }
+    if (msg.includes("502") || msg.includes("503")) {
+      return "Сервер временно недоступен. Попробуйте позже.";
+    }
+    if (msg.includes("404")) {
+      return fallback;
+    }
+    if (msg.startsWith("API error")) {
+      return fallback;
+    }
+    return msg;
+  }
+
   async function handleRegister() {
     if (!form.lastName.trim() || !form.firstName.trim()) {
       setError("Заполните фамилию и имя");
@@ -122,8 +140,7 @@ export default function ProfilePage() {
       setPatientId(result.patientId, result.fullName);
       setShowRegister(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Ошибка регистрации";
-      setError(msg);
+      setError(friendlyError(err, "Ошибка регистрации. Попробуйте позже."));
     } finally {
       setSubmitting(false);
     }
@@ -138,8 +155,7 @@ export default function ProfilePage() {
       setShowUnlinkConfirm(false);
       setForm(emptyForm);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Ошибка отвязки";
-      setError(msg);
+      setError(friendlyError(err, "Ошибка отвязки. Попробуйте позже."));
     } finally {
       setSubmitting(false);
     }
