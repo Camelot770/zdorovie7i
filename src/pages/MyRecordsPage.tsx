@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { CalendarPlus, Shield, AlertCircle } from "lucide-react";
+import { CalendarPlus, Shield, AlertCircle, UserPlus } from "lucide-react";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
@@ -11,9 +11,19 @@ import PullToRefresh from "../components/ui/PullToRefresh";
 import Badge from "../components/ui/Badge";
 import type { Appointment } from "../types";
 
+function friendlyRecordsError(raw: string): string {
+  if (raw.includes("Load failed") || raw.includes("Failed to fetch") || raw.includes("NetworkError")) {
+    return "Нет связи с сервером. Проверьте интернет и попробуйте снова.";
+  }
+  if (raw.includes("502") || raw.includes("503") || raw.includes("504")) {
+    return "Сервер временно недоступен. Попробуйте через минуту.";
+  }
+  return "Не удалось загрузить список записей. Попробуйте обновить.";
+}
+
 export default function MyRecordsPage() {
   const navigate = useNavigate();
-  const { patientId, loading: authLoading } = useAuth();
+  const { patientId, maxUserId, loading: authLoading } = useAuth();
 
   // 1C API requires DD.MM.YYYY format
   const fmt = (d: Date) => `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
@@ -39,6 +49,9 @@ export default function MyRecordsPage() {
 
   const list = Array.isArray(records) ? records : [];
 
+  // Distinguish "not linked" (has maxUserId but no patientId) from "not authenticated"
+  const notLinked = !patientId && !!maxUserId;
+
   return (
     <PageTransition>
       <PullToRefresh onRefresh={refetch}>
@@ -52,18 +65,25 @@ export default function MyRecordsPage() {
 
           {authLoading || loading ? (
             <SkeletonList count={3} />
+          ) : notLinked ? (
+            <EmptyState
+              icon={UserPlus}
+              title="Аккаунт не привязан"
+              description="Привяжите аккаунт к медкарте в разделе «Профиль», чтобы видеть свои записи"
+              action={{ label: "Перейти в профиль", onClick: () => navigate("/profile") }}
+            />
           ) : !patientId ? (
             <EmptyState
               icon={Shield}
               title="Требуется авторизация"
-              description="Для просмотра записей необходимо авторизоваться через бот"
+              description="Откройте приложение через бот для авторизации"
               action={{ label: "На главную", onClick: () => navigate("/") }}
             />
           ) : error ? (
             <EmptyState
               icon={AlertCircle}
               title="Ошибка загрузки"
-              description="Не удалось загрузить список записей. Попробуйте обновить."
+              description={friendlyRecordsError(error)}
               action={{ label: "Повторить", onClick: refetch }}
             />
           ) : list.length === 0 ? (

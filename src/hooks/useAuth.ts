@@ -58,12 +58,14 @@ export function useAuth(): AuthState {
     async function init() {
       // 1️⃣ Validate initData via backend (secure — HMAC-SHA256)
       const initData = window.WebApp?.initData;
+      console.log("[auth] initData present:", !!initData);
       if (initData) {
         try {
           const result = await apiPost<ValidateResponse>(
             "/auth/validate-init-data",
             { init_data: initData }
           );
+          console.log("[auth] validate result:", { valid: result.valid, userId: result.userId, patientId: result.patientId });
           if (result.valid && result.userId) {
             localStorage.setItem("max_user_id", result.userId);
             setState({
@@ -74,13 +76,15 @@ export function useAuth(): AuthState {
             });
             return;
           }
-        } catch {
+        } catch (err) {
+          console.warn("[auth] validate-init-data failed:", err);
           // Validation failed — fall through to legacy methods
         }
       }
 
       // 2️⃣ Fallback: URL param or localStorage
       const maxUserId = getFallbackUserId();
+      console.log("[auth] fallback maxUserId:", maxUserId);
       if (!maxUserId) {
         setState({ loading: false, patientId: null, patientName: null, maxUserId: null });
         return;
@@ -90,13 +94,15 @@ export function useAuth(): AuthState {
         const result = await apiGet<PatientInfoResponse>(
           `/auth/patient/${maxUserId}`
         );
+        console.log("[auth] patient info:", { patientId: result.patientId, fullName: result.fullName });
         setState({
           loading: false,
           patientId: result.patientId,
           patientName: result.fullName || null,
           maxUserId,
         });
-      } catch {
+      } catch (err) {
+        console.warn("[auth] patient lookup failed:", err);
         setState({ loading: false, patientId: null, patientName: null, maxUserId });
       }
     }
