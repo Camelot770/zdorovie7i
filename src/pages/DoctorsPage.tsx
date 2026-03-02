@@ -1,16 +1,18 @@
+import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UserX, AlertCircle, Heart } from "lucide-react";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { useFavoritesStore } from "../store/favorites";
+import { buildPriceMap, getMinPrice } from "../utils/prices";
 import DoctorCard from "../components/DoctorCard";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonList from "../components/ui/SkeletonList";
 import EmptyState from "../components/ui/EmptyState";
 import PullToRefresh from "../components/ui/PullToRefresh";
 import Badge from "../components/ui/Badge";
-import type { Doctor, Clinic, Specialization } from "../types";
+import type { Doctor, Clinic, Specialization, Service } from "../types";
 
 /** Extract first specialization name for a doctor, given a specializations map. */
 function getSpecName(
@@ -56,7 +58,7 @@ export default function DoctorsPage() {
   const specializationId = searchParams.get("specializationId") || "";
   const showFavorites = searchParams.get("favorites") === "true";
 
-  const { setDoctorId, setClinicId, setSpecializationId } = useBookingStore();
+  const { setDoctorId, setClinicId, setSpecializationId, setPrice } = useBookingStore();
   const { favorites } = useFavoritesStore();
 
   // Fetch doctors
@@ -93,6 +95,17 @@ export default function DoctorsPage() {
     specsMap[s.id] = s.name;
   });
 
+  // Fetch all services once (cached 15min on backend) for price lookup
+  const { data: servicesData } = useApi<Service[]>(
+    () => apiGet("/services"),
+    []
+  );
+
+  const priceMap = useMemo(
+    () => buildPriceMap(servicesData || []),
+    [servicesData]
+  );
+
   function handleBook(doctor: Doctor) {
     const name =
       doctor.name ||
@@ -103,6 +116,9 @@ export default function DoctorsPage() {
     setDoctorId(doctor.id, name);
     if (clinicId) setClinicId(clinicId);
     if (specializationId) setSpecializationId(specializationId);
+
+    const minP = getMinPrice(doctor, priceMap, clinicId || undefined);
+    if (minP) setPrice(minP);
 
     navigate(`/slots/${doctor.id}`);
   }
@@ -160,6 +176,7 @@ export default function DoctorsPage() {
                 doctor={doctor}
                 specializationName={getSpecName(doctor, specsMap, specializationId || undefined)}
                 clinicName={getClinicName(doctor, clinicsMap, clinicId || undefined)}
+                price={getMinPrice(doctor, priceMap, clinicId || undefined)}
                 onBook={() => handleBook(doctor)}
               />
             ))

@@ -7,6 +7,7 @@ interface BookingState {
   doctorId: string;
   appointmentAt: string;
   patientId: string;
+  price: number;
 
   clinicName: string;
   doctorName: string;
@@ -18,6 +19,7 @@ interface BookingState {
   setDoctorId: (id: string, name?: string) => void;
   setAppointmentAt: (dt: string) => void;
   setPatientId: (id: string) => void;
+  setPrice: (p: number) => void;
   reset: () => void;
 }
 
@@ -28,6 +30,7 @@ const initial = {
   doctorId: "",
   appointmentAt: "",
   patientId: "",
+  price: 0,
   clinicName: "",
   doctorName: "",
   specializationName: "",
@@ -41,5 +44,6 @@ export const useBookingStore = create<BookingState>((set) => ({
   setDoctorId: (id, name) => set({ doctorId: id, doctorName: name || "" }),
   setAppointmentAt: (dt) => set({ appointmentAt: dt }),
   setPatientId: (id) => set({ patientId: id }),
+  setPrice: (p) => set({ price: p }),
   reset: () => set(initial),
 }));

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Stethoscope, Calendar, Building2, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { User, Stethoscope, Calendar, Building2, Banknote, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { apiPost } from "../api/client";
 import { useBookingStore } from "../store/booking";
 import { useAuth } from "../hooks/useAuth";
@@ -20,6 +20,7 @@ export default function ConfirmPage() {
     clinicName,
     doctorName,
     specializationName,
+    price,
   } = useBookingStore();
 
   const dateStr = appointmentAt
@@ -66,6 +67,7 @@ export default function ConfirmPage() {
     { icon: Stethoscope, label: "Специальность", value: specializationName },
     { icon: Calendar, label: "Дата и время", value: dateStr ? `${dateStr}, ${timeStr}` : null },
     { icon: Building2, label: "Филиал", value: clinicName },
+    { icon: Banknote, label: "Стоимость", value: price ? `от ${price.toLocaleString("ru-RU")} ₽` : null },
   ].filter((d) => d.value);
 
   return (

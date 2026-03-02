@@ -4,17 +4,18 @@ import { AnimatePresence, motion } from "framer-motion";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
+import { collectServiceIds, buildPriceMap, getMinPrice } from "../utils/prices";
 import Calendar from "../components/Calendar";
 import TimeSlots from "../components/TimeSlots";
 import PageTransition from "../components/ui/PageTransition";
 import Avatar from "../components/ui/Avatar";
 import SkeletonCard from "../components/ui/SkeletonCard";
-import type { Schedule, AppointmentSlot, Clinic, Specialization, Doctor } from "../types";
+import type { Schedule, AppointmentSlot, Clinic, Specialization, Doctor, Service } from "../types";
 
 export default function SlotsPage() {
   const navigate = useNavigate();
   const { doctorId } = useParams<{ doctorId: string }>();
-  const { clinicId, specializationId, setAppointmentAt, setClinicId, setSpecializationId, setDoctorId, doctorName } =
+  const { clinicId, specializationId, setAppointmentAt, setClinicId, setSpecializationId, setDoctorId, setPrice, doctorName } =
     useBookingStore();
 
   const [selectedDate, setSelectedDate] = useState("");
@@ -23,8 +24,27 @@ export default function SlotsPage() {
   const { data: clinicsData } = useApi<Clinic[]>(() => apiGet("/clinics"), []);
   const { data: specsData } = useApi<Specialization[]>(() => apiGet("/specializations"), []);
   const { data: doctorData } = useApi<Doctor>(
-    () => doctorId ? apiGet(`/doctors/${doctorId}`) : Promise.resolve(null as unknown as Doctor),
+    () => doctorId ? apiGet(`/doctors/${doctorId}`, { include: "specializations,services" }) : Promise.resolve(null as unknown as Doctor),
     [doctorId]
+  );
+
+  // Fetch service prices for this doctor
+  const doctorServiceIds = useMemo(() => {
+    if (!doctorData) return "";
+    return collectServiceIds([doctorData]).join(",");
+  }, [doctorData]);
+
+  const { data: doctorServicesData } = useApi<Service[]>(
+    () => {
+      if (!doctorServiceIds) return Promise.resolve([]);
+      return apiGet("/services", { serviceIds: doctorServiceIds });
+    },
+    [doctorServiceIds]
+  );
+
+  const priceMap = useMemo(
+    () => buildPriceMap(doctorServicesData || []),
+    [doctorServicesData]
   );
 
   const { data: schedules, loading } = useApi<Schedule[]>(() => {
@@ -90,6 +110,33 @@ export default function SlotsPage() {
         doctorName || "";
       setDoctorId(doctorId, docName);
     }
+
+    // Set price from this doctor's services (picks min for the matched spec/clinic)
+    if (doctorData && priceMap.size > 0) {
+      const foundClinicId = (() => {
+        const list = Array.isArray(schedules) ? schedules : [];
+        for (const s of list) {
+          if (s.isBusy) continue;
+          for (const sl of s.appointmentSlots || []) {
+            if (sl.startAt === slot.startAt) return s.clinicId;
+          }
+        }
+        return undefined;
+      })();
+      const foundSpecId = (() => {
+        const list = Array.isArray(schedules) ? schedules : [];
+        for (const s of list) {
+          if (s.isBusy) continue;
+          for (const sl of s.appointmentSlots || []) {
+            if (sl.startAt === slot.startAt) return s.specializationId;
+          }
+        }
+        return undefined;
+      })();
+      const minP = getMinPrice(doctorData, priceMap, foundClinicId, foundSpecId);
+      if (minP) setPrice(minP);
+    }
+
     setAppointmentAt(slot.startAt);
     navigate("/confirm");
   }
