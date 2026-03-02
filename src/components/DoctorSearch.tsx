@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Search, Loader2, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { apiGet } from "../api/client";
@@ -17,37 +17,43 @@ export default function DoctorSearch({
   onSelect,
 }: DoctorSearchProps) {
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<Doctor[]>([]);
+  const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
+  const [loadingAll, setLoadingAll] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const loaded = useRef(false);
+
+  // Load all doctors once (with clinic/specialization filter)
+  useEffect(() => {
+    loaded.current = false;
+    setAllDoctors([]);
+  }, [clinicId, specializationId]);
 
   useEffect(() => {
-    if (query.length < 2) {
-      setSuggestions([]);
-      setSearching(false);
-      return;
-    }
+    if (query.length < 2 || loaded.current) return;
 
-    setSearching(true);
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(async () => {
-      try {
-        const params: Record<string, string> = { lastName: query };
-        if (clinicId) params.clinicId = clinicId;
-        if (specializationId) params.specializationId = specializationId;
-        const data = await apiGet<Doctor[]>("/doctors", params);
-        setSuggestions(Array.isArray(data) ? data : []);
-        setShowDropdown(true);
-      } catch {
-        setSuggestions([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
+    setLoadingAll(true);
+    const params: Record<string, string> = { limit: "500" };
+    if (clinicId) params.clinicId = clinicId;
+    if (specializationId) params.specializationId = specializationId;
 
-    return () => clearTimeout(timeoutRef.current);
+    apiGet<Doctor[]>("/doctors", params)
+      .then((data) => {
+        setAllDoctors(Array.isArray(data) ? data : []);
+        loaded.current = true;
+      })
+      .catch(() => setAllDoctors([]))
+      .finally(() => setLoadingAll(false));
   }, [query, clinicId, specializationId]);
+
+  // Client-side filtering by name
+  const suggestions = useMemo(() => {
+    if (query.length < 2) return [];
+    const q = query.toLowerCase();
+    return allDoctors.filter((doc) => {
+      const name = getDoctorName(doc).toLowerCase();
+      return name.includes(q);
+    });
+  }, [query, allDoctors]);
 
   function getDoctorName(doc: Doctor) {
     return (
@@ -66,22 +72,25 @@ export default function DoctorSearch({
         <input
           type="text"
           className="w-full border border-gray-300 rounded-lg pl-9 pr-9 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-          placeholder="Введите фамилию"
+          placeholder="Введите фамилию или имя"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setShowDropdown(true);
+          }}
           onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
-        {searching && (
+        {loadingAll && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-600 animate-spin" />
         )}
-        {!searching && query && (
+        {!loadingAll && query && (
           <button
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             onMouseDown={(e) => {
               e.preventDefault();
               setQuery("");
-              setSuggestions([]);
+              setShowDropdown(false);
             }}
           >
             <X className="w-4 h-4" />
@@ -98,12 +107,17 @@ export default function DoctorSearch({
             transition={{ duration: 0.15 }}
             className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-60 overflow-auto"
           >
-            {suggestions.length === 0 ? (
+            {loadingAll ? (
+              <li className="px-3 py-3 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Загрузка...
+              </li>
+            ) : suggestions.length === 0 ? (
               <li className="px-3 py-3 text-sm text-gray-500 text-center">
                 Врачи не найдены
               </li>
             ) : (
-              suggestions.map((doc) => {
+              suggestions.slice(0, 20).map((doc) => {
                 const name = getDoctorName(doc);
                 return (
                   <li

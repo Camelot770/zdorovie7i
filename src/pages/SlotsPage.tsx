@@ -98,7 +98,7 @@ export default function SlotsPage() {
                 >
                   <h3 className="font-medium text-gray-800 mb-2">
                     Время на{" "}
-                    {new Date(selectedDate).toLocaleDateString("ru-RU", {
+                    {new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", {
                       day: "numeric",
                       month: "long",
                     })}

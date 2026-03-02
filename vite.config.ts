@@ -11,5 +11,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      "/api": {
+        target: "https://zdorov-e-sem-i-camelot770.amvera.io",
+        changeOrigin: true,
+      },
+    },
   },
 });
