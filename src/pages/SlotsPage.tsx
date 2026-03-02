@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
-import { collectServiceIds, buildPriceMap, getMinPrice } from "../utils/prices";
+import { collectServiceIds, buildConsultPriceMap, getMinPrice } from "../utils/prices";
 import Calendar from "../components/Calendar";
 import TimeSlots from "../components/TimeSlots";
 import PageTransition from "../components/ui/PageTransition";
@@ -43,7 +43,7 @@ export default function SlotsPage() {
   );
 
   const priceMap = useMemo(
-    () => buildPriceMap(doctorServicesData || []),
+    () => buildConsultPriceMap(doctorServicesData || []),
     [doctorServicesData]
   );
 

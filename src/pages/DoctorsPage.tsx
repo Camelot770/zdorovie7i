@@ -5,7 +5,7 @@ import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { useFavoritesStore } from "../store/favorites";
-import { buildPriceMap, getMinPrice } from "../utils/prices";
+import { buildConsultPriceMap, getMinPrice } from "../utils/prices";
 import DoctorCard from "../components/DoctorCard";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonList from "../components/ui/SkeletonList";
@@ -102,7 +102,7 @@ export default function DoctorsPage() {
   );
 
   const priceMap = useMemo(
-    () => buildPriceMap(servicesData || []),
+    () => buildConsultPriceMap(servicesData || []),
     [servicesData]
   );
 

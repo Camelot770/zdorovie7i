@@ -37,6 +37,23 @@ export function buildPriceMap(services: Service[]): Map<string, number> {
   return map;
 }
 
+/** Regex matching consultation/appointment service names */
+const CONSULT_RE = /при[её]м|консультаци/i;
+
+/**
+ * Build a price map limited to consultation/appointment services.
+ * Excludes procedures, injections, etc. so we show "Приём от X ₽".
+ */
+export function buildConsultPriceMap(services: Service[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const svc of services) {
+    if (svc.price != null && svc.price > 0 && CONSULT_RE.test(svc.name || "")) {
+      map.set(svc.id, svc.price);
+    }
+  }
+  return map;
+}
+
 /**
  * Find the minimum service price for a doctor, optionally filtered by clinic/specialization.
  */
