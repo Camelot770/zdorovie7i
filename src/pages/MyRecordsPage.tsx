@@ -15,8 +15,10 @@ export default function MyRecordsPage() {
   const navigate = useNavigate();
   const { patientId, loading: authLoading } = useAuth();
 
-  const today = new Date().toISOString().split("T")[0];
-  const end = new Date(Date.now() + 60 * 86400000).toISOString().split("T")[0];
+  // 1C API requires DD.MM.YYYY format
+  const fmt = (d: Date) => `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+  const today = fmt(new Date());
+  const end = fmt(new Date(Date.now() + 60 * 86400000));
 
   const {
     data: records,
