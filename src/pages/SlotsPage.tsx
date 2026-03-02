@@ -9,19 +9,23 @@ import TimeSlots from "../components/TimeSlots";
 import PageTransition from "../components/ui/PageTransition";
 import Avatar from "../components/ui/Avatar";
 import SkeletonCard from "../components/ui/SkeletonCard";
-import type { Schedule, AppointmentSlot, Clinic, Specialization } from "../types";
+import type { Schedule, AppointmentSlot, Clinic, Specialization, Doctor } from "../types";
 
 export default function SlotsPage() {
   const navigate = useNavigate();
   const { doctorId } = useParams<{ doctorId: string }>();
-  const { clinicId, specializationId, setAppointmentAt, setClinicId, setSpecializationId, doctorName } =
+  const { clinicId, specializationId, setAppointmentAt, setClinicId, setSpecializationId, setDoctorId, doctorName } =
     useBookingStore();
 
   const [selectedDate, setSelectedDate] = useState("");
 
-  // Fetch clinic/specialization names for confirm page display
+  // Fetch clinic/specialization/doctor names for confirm page display
   const { data: clinicsData } = useApi<Clinic[]>(() => apiGet("/clinics"), []);
   const { data: specsData } = useApi<Specialization[]>(() => apiGet("/specializations"), []);
+  const { data: doctorData } = useApi<Doctor>(
+    () => doctorId ? apiGet(`/doctors/${doctorId}`) : Promise.resolve(null as unknown as Doctor),
+    [doctorId]
+  );
 
   const { data: schedules, loading } = useApi<Schedule[]>(() => {
     const params: Record<string, string> = {
@@ -79,6 +83,13 @@ export default function SlotsPage() {
         }
       }
     }
+    // Ensure doctorId is in store (needed when navigating from favorites)
+    if (doctorId) {
+      const docName = doctorData?.name ||
+        [doctorData?.lastName, doctorData?.firstName, doctorData?.middleName].filter(Boolean).join(" ") ||
+        doctorName || "";
+      setDoctorId(doctorId, docName);
+    }
     setAppointmentAt(slot.startAt);
     navigate("/confirm");
   }
@@ -86,10 +97,12 @@ export default function SlotsPage() {
   return (
     <PageTransition>
       <div className="space-y-4">
-        {doctorName && (
+        {(doctorName || doctorData?.name) && (
           <div className="flex items-center gap-3">
-            <Avatar name={doctorName} size="md" />
-            <h2 className="text-lg font-semibold text-gray-900">{doctorName}</h2>
+            <Avatar name={doctorName || doctorData?.name || ""} size="md" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              {doctorName || doctorData?.name || [doctorData?.lastName, doctorData?.firstName, doctorData?.middleName].filter(Boolean).join(" ")}
+            </h2>
           </div>
         )}
 
