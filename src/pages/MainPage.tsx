@@ -39,7 +39,7 @@ export default function MainPage() {
     []
   );
 
-  // Collect all serviceIds and load full data (names + prices)
+  // Collect all serviceIds and load full data (names + prices) in batches
   const allServiceIds = useMemo(
     () => collectServiceIds(doctors || [], clinicId || undefined),
     [doctors, clinicId]
@@ -49,7 +49,15 @@ export default function MainPage() {
   const { data: servicesData, loading: svcLoading } = useApi<Service[]>(
     () => {
       if (allServiceIds.length === 0) return Promise.resolve([]);
-      return apiGet("/services", { serviceIds: serviceIdsKey });
+      // Split into chunks of 40 to avoid 431 (URL too long)
+      const CHUNK = 40;
+      const chunks: string[][] = [];
+      for (let i = 0; i < allServiceIds.length; i += CHUNK) {
+        chunks.push(allServiceIds.slice(i, i + CHUNK));
+      }
+      return Promise.all(
+        chunks.map((ids) => apiGet<Service[]>("/services", { serviceIds: ids.join(",") }))
+      ).then((results) => results.flat());
     },
     [serviceIdsKey]
   );
