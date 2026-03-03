@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Search, Loader2, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { apiGet } from "../api/client";
 import Avatar from "./ui/Avatar";
@@ -82,7 +82,7 @@ export default function DoctorSearch({
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
         {loadingAll && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-600 animate-spin" />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
         )}
         {!loadingAll && query && (
           <button
@@ -109,7 +109,7 @@ export default function DoctorSearch({
           >
             {loadingAll ? (
               <li className="px-3 py-3 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                 Загрузка...
               </li>
             ) : suggestions.length === 0 ? (
