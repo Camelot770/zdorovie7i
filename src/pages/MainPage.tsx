@@ -5,7 +5,6 @@ import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { HeartPulse } from "lucide-react";
 import ClinicSelect from "../components/ClinicSelect";
-import AgeToggle from "../components/AgeToggle";
 import SpecializationAccordion from "../components/SpecializationAccordion";
 import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
@@ -19,9 +18,7 @@ export default function MainPage() {
 
   const {
     clinicId,
-    isChild,
     setClinicId,
-    setIsChild,
     setSpecializationId,
     setDoctorId,
   } = useBookingStore();
@@ -31,25 +28,10 @@ export default function MainPage() {
     []
   );
 
-  // Age filter: adult=25, child=5 (representative ages for 1C filtering)
-  const ageParam = isChild ? 5 : 25;
-
-  const { data: rawSpecializations, loading: specsLoading } = useApi<Specialization[]>(
-    () => apiGet("/specializations", { age: String(ageParam) }),
-    [ageParam]
+  const { data: specializations, loading: specsLoading } = useApi<Specialization[]>(
+    () => apiGet("/specializations"),
+    []
   );
-
-  // Client-side age filtering (1C may not filter by age parameter)
-  const specializations = useMemo(() => {
-    if (!rawSpecializations) return null;
-    return rawSpecializations.filter((s) => {
-      // If no age limits defined — show for both
-      if (s.ageFrom == null && s.ageTo == null) return true;
-      const from = s.ageFrom ?? 0;
-      const to = s.ageTo ?? 999;
-      return ageParam >= from && ageParam <= to;
-    });
-  }, [rawSpecializations, ageParam]);
 
   // Load doctors (with services structure) to map services to specializations
   const { data: doctors, loading: docsLoading } = useApi<Doctor[]>(
@@ -147,8 +129,6 @@ export default function MainPage() {
             loading={clinicsLoading}
           />
         )}
-
-        <AgeToggle isChild={isChild} onChange={setIsChild} />
 
         <DoctorSearch
           clinicId={clinicId}
