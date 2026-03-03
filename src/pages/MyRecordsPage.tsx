@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarPlus, Shield, AlertCircle, UserPlus } from "lucide-react";
 import { apiGet } from "../api/client";
@@ -47,7 +48,20 @@ export default function MyRecordsPage() {
     [patientId]
   );
 
-  const list = Array.isArray(records) ? records : [];
+  // Sort: active/planned first (by nearest date), canceled at the bottom
+  const list = useMemo(() => {
+    const raw = Array.isArray(records) ? records : [];
+    return [...raw].sort((a, b) => {
+      const aCanceled = a.canceled ? 1 : 0;
+      const bCanceled = b.canceled ? 1 : 0;
+      // Canceled go to the bottom
+      if (aCanceled !== bCanceled) return aCanceled - bCanceled;
+      // Within same group — sort by appointmentAt ascending (nearest first)
+      const dateA = a.appointmentAt ? new Date(a.appointmentAt).getTime() : 0;
+      const dateB = b.appointmentAt ? new Date(b.appointmentAt).getTime() : 0;
+      return dateA - dateB;
+    });
+  }, [records]);
 
   // Distinguish "not linked" (has maxUserId but no patientId) from "not authenticated"
   const notLinked = !patientId && !!maxUserId;
