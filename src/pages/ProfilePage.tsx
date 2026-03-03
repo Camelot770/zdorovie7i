@@ -43,7 +43,7 @@ const emptyForm: RegisterForm = {
   phone: "+7",
 };
 
-type LinkStep = "phone" | "pick" | "register";
+type LinkStep = "phone" | "confirm" | "pick" | "register";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -53,6 +53,7 @@ export default function ProfilePage() {
   const [linkStep, setLinkStep] = useState<LinkStep>("phone");
   const [linkPhone, setLinkPhone] = useState("+7");
   const [foundPatients, setFoundPatients] = useState<Patient[]>([]);
+  const [linkedResult, setLinkedResult] = useState<{ patientId: string; fullName: string } | null>(null);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [form, setForm] = useState<RegisterForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -127,7 +128,9 @@ export default function ProfilePage() {
       }>("/auth/link", { max_user_id: maxUserId, phone: linkPhone });
 
       if (result.status === "linked" && result.patientId) {
-        setPatientId(result.patientId, result.fullName || "");
+        // Don't auto-accept — show confirmation so user can reject if wrong person
+        setLinkedResult({ patientId: result.patientId, fullName: result.fullName || "" });
+        setLinkStep("confirm");
       } else if (result.status === "multiple" && result.patients?.length) {
         setFoundPatients(result.patients);
         setLinkStep("pick");
@@ -144,6 +147,29 @@ export default function ProfilePage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleConfirmLink() {
+    if (linkedResult) {
+      setPatientId(linkedResult.patientId, linkedResult.fullName);
+      setLinkedResult(null);
+    }
+  }
+
+  async function handleRejectLink() {
+    // User said "this isn't me" — unlink and show registration form
+    setSubmitting(true);
+    setError("");
+    try {
+      await apiPost("/auth/unlink", { max_user_id: maxUserId });
+    } catch {
+      // Ignore unlink errors — we proceed to registration anyway
+    } finally {
+      setSubmitting(false);
+    }
+    setLinkedResult(null);
+    setForm({ ...emptyForm, phone: linkPhone });
+    setLinkStep("register");
   }
 
   async function handlePickPatient(patient: Patient) {
@@ -387,6 +413,48 @@ export default function ProfilePage() {
             <p className="text-xs text-gray-400 text-center">
               Если вы ранее были пациентом клиники, мы найдём вашу карту по телефону
             </p>
+
+            <button
+              type="button"
+              onClick={() => { setForm(emptyForm); setLinkStep("register"); setError(""); }}
+              className="w-full text-xs text-primary-600 font-medium py-1"
+            >
+              Зарегистрировать нового пациента →
+            </button>
+          </div>
+        )}
+
+        {/* Step 1b: Confirm found patient */}
+        {!patientId && linkStep === "confirm" && linkedResult && (
+          <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
+            <h3 className="font-semibold text-gray-900 text-sm">Найден пациент</h3>
+            <p className="text-xs text-gray-500">Это вы?</p>
+
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary-50 border border-primary-100">
+              <Avatar name={linkedResult.fullName} size="sm" />
+              <p className="text-sm font-medium text-gray-900">{linkedResult.fullName}</p>
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleRejectLink}
+                disabled={submitting}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-60 transition-colors"
+              >
+                {submitting ? "Отвязка..." : "Нет, это не я"}
+              </button>
+              <button
+                onClick={handleConfirmLink}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-primary-600 text-white hover:bg-primary-700 transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Да, привязать
+              </button>
+            </div>
           </div>
         )}
 
@@ -425,24 +493,26 @@ export default function ProfilePage() {
               <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
-            <button
-              onClick={() => { setLinkStep("phone"); setError(""); }}
-              className="w-full py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-            >
-              Назад
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setLinkStep("phone"); setError(""); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                Назад
+              </button>
+              <button
+                onClick={() => { setForm({ ...emptyForm, phone: linkPhone }); setLinkStep("register"); setError(""); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-primary-600 hover:bg-primary-50 transition-colors"
+              >
+                Новый пациент
+              </button>
+            </div>
           </div>
         )}
 
         {/* Step 3: Registration form (fallback when patient not found) */}
         {!patientId && linkStep === "register" && (
           <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
-            <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
-              <p className="text-xs text-amber-800">
-                Пациент с таким телефоном не найден. Заполните форму для регистрации новой карты.
-              </p>
-            </div>
-
             <h3 className="font-semibold text-gray-900 text-sm">Регистрация нового пациента</h3>
 
             <div>
