@@ -1,15 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
-import { Search, HeartPulse } from "lucide-react";
+import { HeartPulse } from "lucide-react";
 import ClinicSelect from "../components/ClinicSelect";
-import SpecializationSelect from "../components/SpecializationSelect";
+import SpecializationAccordion from "../components/SpecializationAccordion";
 import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonCard from "../components/ui/SkeletonCard";
-import type { Clinic, Specialization, Doctor } from "../types";
+import { groupServicesBySpecialization, collectServiceIds } from "../utils/prices";
+import type { Clinic, Specialization, Doctor, Service } from "../types";
 
 export default function MainPage() {
   const navigate = useNavigate();
@@ -17,7 +18,6 @@ export default function MainPage() {
 
   const {
     clinicId,
-    specializationId,
     setClinicId,
     setSpecializationId,
     setDoctorId,
@@ -31,6 +31,38 @@ export default function MainPage() {
   const { data: specializations, loading: specsLoading } = useApi<Specialization[]>(
     () => apiGet("/specializations"),
     []
+  );
+
+  // Load doctors (with services structure) to map services to specializations
+  const { data: doctors, loading: docsLoading } = useApi<Doctor[]>(
+    () => apiGet("/doctors", { include: "specializations,services" }),
+    []
+  );
+
+  // Collect all serviceIds and load full data (names + prices)
+  const allServiceIds = useMemo(
+    () => collectServiceIds(doctors || [], clinicId || undefined),
+    [doctors, clinicId]
+  );
+
+  const serviceIdsKey = allServiceIds.join(",");
+  const { data: servicesData, loading: svcLoading } = useApi<Service[]>(
+    () => {
+      if (allServiceIds.length === 0) return Promise.resolve([]);
+      return apiGet("/services", { serviceIds: serviceIdsKey });
+    },
+    [serviceIdsKey]
+  );
+
+  // Build specialization → services mapping
+  const servicesBySpec = useMemo(
+    () =>
+      groupServicesBySpecialization(
+        doctors || [],
+        servicesData || [],
+        clinicId || undefined
+      ),
+    [doctors, servicesData, clinicId]
   );
 
   useEffect(() => {
@@ -54,18 +86,20 @@ export default function MainPage() {
     navigate(`/slots/${doctor.id}`);
   }
 
-  function handleSearch() {
+  function handleSpecSelect(specId: string, specName: string) {
+    setSpecializationId(specId, specName);
     const params = new URLSearchParams();
     if (clinicId) params.set("clinicId", clinicId);
-    if (specializationId) params.set("specializationId", specializationId);
+    params.set("specializationId", specId);
     navigate(`/doctors?${params.toString()}`);
   }
+
+  const dataLoading = docsLoading || svcLoading;
 
   return (
     <PageTransition>
       <div className="space-y-4">
         <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-4 shadow-lg flex items-center gap-3.5 relative overflow-hidden">
-          {/* Decorative circles */}
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
           <div className="absolute -right-2 bottom-0 w-16 h-16 rounded-full bg-white/5" />
           <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
@@ -73,7 +107,7 @@ export default function MainPage() {
           </div>
           <div className="relative z-10">
             <h2 className="text-[15px] font-bold text-white">Запись на приём</h2>
-            <p className="text-[12px] text-white/80 mt-0.5">Выберите параметры для поиска врача</p>
+            <p className="text-[12px] text-white/80 mt-0.5">Выберите специальность или найдите врача</p>
           </div>
         </div>
 
@@ -88,30 +122,25 @@ export default function MainPage() {
           />
         )}
 
-        {specsLoading ? (
-          <SkeletonCard lines={2} />
-        ) : (
-          <SpecializationSelect
-            specializations={specializations || []}
-            value={specializationId}
-            onChange={setSpecializationId}
-            loading={specsLoading}
-          />
-        )}
-
         <DoctorSearch
           clinicId={clinicId}
-          specializationId={specializationId}
+          specializationId=""
           onSelect={handleDoctorSelect}
         />
 
-        <button
-          onClick={handleSearch}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white py-3.5 rounded-xl font-semibold shadow-md shadow-primary-600/30 hover:shadow-lg hover:shadow-primary-600/40 active:scale-[0.97] transition-all duration-200"
-        >
-          <Search className="w-[18px] h-[18px]" />
-          Найти врачей
-        </button>
+        {specsLoading || dataLoading ? (
+          <div className="space-y-2">
+            <SkeletonCard lines={1} />
+            <SkeletonCard lines={1} />
+            <SkeletonCard lines={1} />
+          </div>
+        ) : (
+          <SpecializationAccordion
+            specializations={specializations || []}
+            servicesBySpec={servicesBySpec}
+            onSelect={handleSpecSelect}
+          />
+        )}
       </div>
     </PageTransition>
   );

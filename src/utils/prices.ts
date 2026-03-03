@@ -57,6 +57,57 @@ export function buildConsultPriceMap(services: Service[]): Map<string, number> {
 /**
  * Find the minimum service price for a doctor, optionally filtered by clinic/specialization.
  */
+/**
+ * Group consultation services by specializationId.
+ * Aggregates from doctor → clinics → specializations → services,
+ * then maps to full Service objects filtered by CONSULT_RE.
+ */
+export function groupServicesBySpecialization(
+  doctors: Doctor[],
+  services: Service[],
+  clinicId?: string
+): Record<string, Service[]> {
+  // 1. Build serviceId → Service lookup (consultations only)
+  const svcLookup = new Map<string, Service>();
+  for (const svc of services) {
+    if (svc.price != null && svc.price > 0 && CONSULT_RE.test(svc.name || "")) {
+      svcLookup.set(svc.id, svc);
+    }
+  }
+
+  // 2. Collect serviceIds per specializationId from doctor data
+  const specSvcIds: Record<string, Set<string>> = {};
+  for (const doc of doctors) {
+    for (const cl of doc.clinics || []) {
+      if (clinicId && cl.clinicId !== clinicId) continue;
+      for (const sp of cl.specializations || []) {
+        const specId = sp.specializationId;
+        if (!specSvcIds[specId]) specSvcIds[specId] = new Set();
+        for (const svc of sp.services || []) {
+          if (svcLookup.has(svc.serviceId)) {
+            specSvcIds[specId].add(svc.serviceId);
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Map to Service objects, sort by price
+  const result: Record<string, Service[]> = {};
+  for (const [specId, ids] of Object.entries(specSvcIds)) {
+    const svcs = Array.from(ids)
+      .map((id) => svcLookup.get(id)!)
+      .filter(Boolean)
+      .sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    if (svcs.length > 0) result[specId] = svcs;
+  }
+
+  return result;
+}
+
+/**
+ * Find the minimum service price for a doctor, optionally filtered by clinic/specialization.
+ */
 export function getMinPrice(
   doctor: Doctor,
   priceMap: Map<string, number>,
