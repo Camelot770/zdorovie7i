@@ -12,6 +12,8 @@ import {
   Loader2,
   Unlink,
   User,
+  Search,
+  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useFavoritesStore } from "../store/favorites";
@@ -19,6 +21,7 @@ import { apiPost } from "../api/client";
 import PageTransition from "../components/ui/PageTransition";
 import Avatar from "../components/ui/Avatar";
 import EmptyState from "../components/ui/EmptyState";
+import type { Patient } from "../types";
 
 interface RegisterForm {
   lastName: string;
@@ -40,12 +43,16 @@ const emptyForm: RegisterForm = {
   phone: "+7",
 };
 
+type LinkStep = "phone" | "pick" | "register";
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { patientId, patientName, maxUserId, loading, setPatientId, resetPatient } = useAuth();
   const { favorites } = useFavoritesStore();
 
-  const [showRegister, setShowRegister] = useState(false);
+  const [linkStep, setLinkStep] = useState<LinkStep>("phone");
+  const [linkPhone, setLinkPhone] = useState("+7");
+  const [foundPatients, setFoundPatients] = useState<Patient[]>([]);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [form, setForm] = useState<RegisterForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -101,6 +108,63 @@ export default function ProfilePage() {
     return msg;
   }
 
+  async function handleLink() {
+    const phoneDigits = linkPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 11) {
+      setError("Введите номер телефона полностью");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const result = await apiPost<{
+        status: string;
+        patientId?: string;
+        fullName?: string;
+        patients?: Patient[];
+      }>("/auth/link", { max_user_id: maxUserId, phone: linkPhone });
+
+      if (result.status === "linked" && result.patientId) {
+        setPatientId(result.patientId, result.fullName || "");
+      } else if (result.status === "multiple" && result.patients?.length) {
+        setFoundPatients(result.patients);
+        setLinkStep("pick");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("404")) {
+        // Patient not found → offer registration
+        setForm({ ...emptyForm, phone: linkPhone });
+        setLinkStep("register");
+        setError("");
+        return;
+      }
+      setError(friendlyError(err, "Ошибка поиска пациента. Попробуйте позже."));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handlePickPatient(patient: Patient) {
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const result = await apiPost<{
+        status: string;
+        patientId: string;
+        fullName: string;
+      }>(`/auth/link/${patient.id}?max_user_id=${maxUserId}`);
+
+      setPatientId(result.patientId, result.fullName);
+    } catch (err) {
+      setError(friendlyError(err, "Ошибка привязки. Попробуйте позже."));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleRegister() {
     if (!form.lastName.trim() || !form.firstName.trim()) {
       setError("Заполните фамилию и имя");
@@ -138,7 +202,7 @@ export default function ProfilePage() {
         }
       );
       setPatientId(result.patientId, result.fullName);
-      setShowRegister(false);
+      setLinkStep("phone");
     } catch (err) {
       setError(friendlyError(err, "Ошибка регистрации. Попробуйте позже."));
     } finally {
@@ -154,6 +218,8 @@ export default function ProfilePage() {
       resetPatient();
       setShowUnlinkConfirm(false);
       setForm(emptyForm);
+      setLinkStep("phone");
+      setLinkPhone("+7");
     } catch (err) {
       setError(friendlyError(err, "Ошибка отвязки. Попробуйте позже."));
     } finally {
@@ -277,25 +343,106 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Registration prompt */}
-        {!patientId && !showRegister && (
-          <div className="bg-primary-50 rounded-2xl p-4 border border-primary-100">
-            <p className="text-sm text-primary-800 mb-3">
-              Для записи на приём необходимо зарегистрироваться в системе клиники.
-            </p>
+        {/* Step 1: Phone linking (primary flow) */}
+        {!patientId && linkStep === "phone" && (
+          <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                <Phone className="w-4 h-4 text-primary-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">Привязка к клинике</h3>
+                <p className="text-xs text-gray-500">Введите номер телефона из карты пациента</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Телефон</label>
+              <input
+                type="tel"
+                value={linkPhone}
+                onChange={(e) => { setLinkPhone(e.target.value); setError(""); }}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="+7 (999) 123-45-67"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+
             <button
-              onClick={() => setShowRegister(true)}
-              className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-700 active:scale-[0.97] transition-all"
+              onClick={handleLink}
+              disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 active:scale-[0.97] transition-all"
             >
-              <UserPlus className="w-4 h-4" />
-              Зарегистрироваться
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
+              {submitting ? "Поиск..." : "Найти"}
+            </button>
+
+            <p className="text-xs text-gray-400 text-center">
+              Если вы ранее были пациентом клиники, мы найдём вашу карту по телефону
+            </p>
+          </div>
+        )}
+
+        {/* Step 2: Multiple patients found — pick one */}
+        {!patientId && linkStep === "pick" && (
+          <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
+            <h3 className="font-semibold text-gray-900 text-sm">Найдено несколько пациентов</h3>
+            <p className="text-xs text-gray-500">Выберите свою карту пациента:</p>
+
+            <div className="space-y-2">
+              {foundPatients.map((patient) => {
+                const name = [patient.lastName, patient.firstName, patient.middleName]
+                  .filter(Boolean)
+                  .join(" ");
+                return (
+                  <button
+                    key={patient.id}
+                    onClick={() => handlePickPatient(patient)}
+                    disabled={submitting}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-primary-50 hover:border-primary-200 active:bg-primary-100 transition-colors text-left disabled:opacity-60"
+                  >
+                    <Avatar name={name} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+                      {patient.birthDate && (
+                        <p className="text-xs text-gray-500">{patient.birthDate}</p>
+                      )}
+                    </div>
+                    <CheckCircle2 className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            )}
+
+            <button
+              onClick={() => { setLinkStep("phone"); setError(""); }}
+              className="w-full py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            >
+              Назад
             </button>
           </div>
         )}
 
-        {/* Registration form */}
-        {!patientId && showRegister && (
+        {/* Step 3: Registration form (fallback when patient not found) */}
+        {!patientId && linkStep === "register" && (
           <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
+            <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+              <p className="text-xs text-amber-800">
+                Пациент с таким телефоном не найден. Заполните форму для регистрации новой карты.
+              </p>
+            </div>
+
             <h3 className="font-semibold text-gray-900 text-sm">Регистрация нового пациента</h3>
 
             <div>
@@ -394,10 +541,10 @@ export default function ProfilePage() {
 
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => { setShowRegister(false); setError(""); }}
+                onClick={() => { setLinkStep("phone"); setError(""); }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
               >
-                Отмена
+                Назад
               </button>
               <button
                 onClick={handleRegister}
