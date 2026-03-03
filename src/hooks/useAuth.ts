@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiGet, apiPost } from "../api/client";
+import { apiGetFresh, apiPost } from "../api/client";
 
 interface AuthState {
   loading: boolean;
@@ -68,10 +68,22 @@ export function useAuth(): AuthState {
           console.log("[auth] validate result:", { valid: result.valid, userId: result.userId, patientId: result.patientId });
           if (result.valid && result.userId) {
             localStorage.setItem("max_user_id", result.userId);
+            // Fetch patient name if linked
+            let patientName: string | null = null;
+            if (result.patientId) {
+              try {
+                const pInfo = await apiGetFresh<PatientInfoResponse>(
+                  `/auth/patient/${result.userId}`
+                );
+                patientName = pInfo.fullName || null;
+              } catch {
+                // name unavailable — not critical
+              }
+            }
             setState({
               loading: false,
               patientId: result.patientId,
-              patientName: null,
+              patientName,
               maxUserId: result.userId,
             });
             return;
@@ -91,7 +103,7 @@ export function useAuth(): AuthState {
       }
 
       try {
-        const result = await apiGet<PatientInfoResponse>(
+        const result = await apiGetFresh<PatientInfoResponse>(
           `/auth/patient/${maxUserId}`
         );
         console.log("[auth] patient info:", { patientId: result.patientId, fullName: result.fullName });
