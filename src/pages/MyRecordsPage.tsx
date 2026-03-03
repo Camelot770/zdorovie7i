@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarPlus, Shield, AlertCircle, UserPlus } from "lucide-react";
-import { apiGet } from "../api/client";
+import { apiGetFresh } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
 import RecordCard from "../components/RecordCard";
@@ -39,7 +39,7 @@ export default function MyRecordsPage() {
   } = useApi<Appointment[]>(
     () => {
       if (!patientId) return Promise.resolve([]);
-      return apiGet("/records", {
+      return apiGetFresh("/records", {
         beginDate: today,
         endDate: end,
         patientId,

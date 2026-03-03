@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { apiGet } from "../api/client";
+import { apiGet, apiGetFresh } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { collectServiceIds, buildConsultPriceMap, getMinPrice } from "../utils/prices";
@@ -54,7 +54,7 @@ export default function SlotsPage() {
     };
     if (clinicId) params.clinicIds = clinicId;
     if (specializationId) params.specializationIds = specializationId;
-    return apiGet("/schedules", params);
+    return apiGetFresh("/schedules", params);
   }, [doctorId, clinicId, specializationId]);
 
   const availableDates = useMemo(() => {

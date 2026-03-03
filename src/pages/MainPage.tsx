@@ -9,8 +9,15 @@ import SpecializationAccordion from "../components/SpecializationAccordion";
 import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonCard from "../components/ui/SkeletonCard";
-import { groupServicesBySpecialization, collectServiceIds } from "../utils/prices";
+import { groupServicesBySpecialization } from "../utils/prices";
 import type { Clinic, Specialization, Doctor, Service } from "../types";
+
+interface MainPageData {
+  clinics: Clinic[];
+  specializations: Specialization[];
+  doctors: Doctor[];
+  services: Service[];
+}
 
 export default function MainPage() {
   const navigate = useNavigate();
@@ -23,59 +30,26 @@ export default function MainPage() {
     setDoctorId,
   } = useBookingStore();
 
-  const { data: clinics, loading: clinicsLoading } = useApi<Clinic[]>(
-    () => apiGet("/clinics"),
+  // Single combined request instead of 4 separate calls
+  const { data: mainData, loading } = useApi<MainPageData>(
+    () => apiGet("/main-page-data"),
     []
   );
 
-  const { data: specializations, loading: specsLoading } = useApi<Specialization[]>(
-    () => apiGet("/specializations"),
-    []
-  );
-
-  // Load doctors (with services structure) to map services to specializations
-  const { data: doctors, loading: docsLoading } = useApi<Doctor[]>(
-    () => apiGet("/doctors", { include: "specializations,services" }),
-    []
-  );
-
-  // Collect all serviceIds and load full data (names + prices) in batches
-  const allServiceIds = useMemo(
-    () => collectServiceIds(doctors || [], clinicId || undefined),
-    [doctors, clinicId]
-  );
-
-  const serviceIdsKey = allServiceIds.join(",");
-  const { data: servicesData, loading: svcLoading } = useApi<Service[]>(
-    () => {
-      if (allServiceIds.length === 0) return Promise.resolve([]);
-      // Split into chunks of 40 to avoid 431 (URL too long)
-      const CHUNK = 40;
-      const chunks: string[][] = [];
-      for (let i = 0; i < allServiceIds.length; i += CHUNK) {
-        chunks.push(allServiceIds.slice(i, i + CHUNK));
-      }
-      return Promise.all(
-        chunks.map((ids) => apiGet<Service[]>("/services", { serviceIds: ids.join(",") }))
-      ).then((results) => results.flat());
-    },
-    [serviceIdsKey]
-  );
+  const clinics = mainData?.clinics || [];
+  const specializations = mainData?.specializations || [];
+  const doctors = mainData?.doctors || [];
+  const services = mainData?.services || [];
 
   // Build specialization → services mapping
   const servicesBySpec = useMemo(
-    () =>
-      groupServicesBySpecialization(
-        doctors || [],
-        servicesData || [],
-        clinicId || undefined
-      ),
-    [doctors, servicesData, clinicId]
+    () => groupServicesBySpecialization(doctors, services, clinicId || undefined),
+    [doctors, services, clinicId]
   );
 
   useEffect(() => {
     const preselectedClinic = searchParams.get("clinicId");
-    if (preselectedClinic && clinics) {
+    if (preselectedClinic && clinics.length > 0) {
       const clinic = clinics.find((c) => c.id === preselectedClinic);
       if (clinic) {
         setClinicId(clinic.id, clinic.shortAddress || clinic.name);
@@ -102,8 +76,6 @@ export default function MainPage() {
     navigate(`/doctors?${params.toString()}`);
   }
 
-  const dataLoading = docsLoading || svcLoading;
-
   return (
     <PageTransition>
       <div className="space-y-4">
@@ -119,14 +91,14 @@ export default function MainPage() {
           </div>
         </div>
 
-        {clinicsLoading ? (
+        {loading ? (
           <SkeletonCard lines={2} />
         ) : (
           <ClinicSelect
-            clinics={clinics || []}
+            clinics={clinics}
             value={clinicId}
             onChange={setClinicId}
-            loading={clinicsLoading}
+            loading={false}
           />
         )}
 
@@ -136,7 +108,7 @@ export default function MainPage() {
           onSelect={handleDoctorSelect}
         />
 
-        {specsLoading || dataLoading ? (
+        {loading ? (
           <div className="space-y-2">
             <SkeletonCard lines={1} />
             <SkeletonCard lines={1} />
@@ -144,9 +116,9 @@ export default function MainPage() {
           </div>
         ) : (
           <SpecializationAccordion
-            specializations={specializations || []}
+            specializations={specializations}
             servicesBySpec={servicesBySpec}
-            doctors={doctors || []}
+            doctors={doctors}
             clinicId={clinicId || undefined}
             onSelectDoctor={handleDoctorSelect}
             onSelectSpec={handleSpecSelect}

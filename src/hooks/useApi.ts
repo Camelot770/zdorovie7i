@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { clearCache } from "../api/client";
 
 interface UseApiState<T> {
   data: T | null;
@@ -19,6 +20,8 @@ export function useApi<T>(
   const [trigger, setTrigger] = useState(0);
 
   const refetch = useCallback(() => {
+    // Clear the frontend cache so pull-to-refresh gets fresh data
+    clearCache();
     setRefreshing(true);
     setTrigger((t) => t + 1);
   }, []);

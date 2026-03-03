@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UserX, AlertCircle, Heart } from "lucide-react";
-import { apiGet } from "../api/client";
+import { apiGet, apiGetFresh } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { useFavoritesStore } from "../store/favorites";
@@ -122,7 +122,7 @@ export default function DoctorsPage() {
       };
       if (clinicId) params.clinicIds = clinicId;
       if (specializationId) params.specializationIds = specializationId;
-      return apiGet("/schedules", params);
+      return apiGetFresh("/schedules", params);
     },
     [scheduleKey, clinicId, specializationId]
   );
