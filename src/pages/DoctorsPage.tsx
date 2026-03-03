@@ -12,7 +12,7 @@ import SkeletonList from "../components/ui/SkeletonList";
 import EmptyState from "../components/ui/EmptyState";
 import PullToRefresh from "../components/ui/PullToRefresh";
 import Badge from "../components/ui/Badge";
-import type { Doctor, Clinic, Specialization, Service } from "../types";
+import type { Doctor, Clinic, Specialization, Service, Schedule } from "../types";
 
 /** Extract first specialization name for a doctor, given a specializations map. */
 function getSpecName(
@@ -106,6 +106,62 @@ export default function DoctorsPage() {
     [servicesData]
   );
 
+  // Fetch schedules for nearest available date (limit to first 20 doctors)
+  const scheduleDocIds = useMemo(() => {
+    const docs = Array.isArray(doctors) ? doctors : [];
+    return docs.slice(0, 20).map((d) => d.id);
+  }, [doctors]);
+
+  const scheduleKey = scheduleDocIds.join(",");
+  const { data: schedules } = useApi<Schedule[]>(
+    () => {
+      if (scheduleDocIds.length === 0) return Promise.resolve([]);
+      const params: Record<string, string> = {
+        doctorIds: scheduleDocIds.join(","),
+        include: "appointmentSlots",
+      };
+      if (clinicId) params.clinicIds = clinicId;
+      if (specializationId) params.specializationIds = specializationId;
+      return apiGet("/schedules", params);
+    },
+    [scheduleKey, clinicId, specializationId]
+  );
+
+  /** Map doctorId → formatted nearest date string */
+  const nearestDateMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!schedules) return map;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+    const earliest: Record<string, Date> = {};
+    for (const sch of Array.isArray(schedules) ? schedules : []) {
+      if (sch.isBusy) continue;
+      for (const slot of sch.appointmentSlots || []) {
+        if (!slot.isEmpty) continue;
+        const slotDate = new Date(slot.startAt);
+        if (slotDate < now) continue;
+        if (!earliest[sch.doctorId] || slotDate < earliest[sch.doctorId]) {
+          earliest[sch.doctorId] = slotDate;
+        }
+      }
+    }
+
+    for (const [docId, dt] of Object.entries(earliest)) {
+      const dayStart = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+      if (dayStart.getTime() === todayStart.getTime()) {
+        map[docId] = "сегодня";
+      } else if (dayStart.getTime() === tomorrowStart.getTime()) {
+        map[docId] = "завтра";
+      } else {
+        map[docId] = dt.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+      }
+    }
+    return map;
+  }, [schedules]);
+
   function handleBook(doctor: Doctor) {
     const name =
       doctor.name ||
@@ -177,6 +233,7 @@ export default function DoctorsPage() {
                 specializationName={getSpecName(doctor, specsMap, specializationId || undefined)}
                 clinicName={getClinicName(doctor, clinicsMap, clinicId || undefined)}
                 price={getMinPrice(doctor, priceMap, clinicId || undefined)}
+                nearestDate={nearestDateMap[doctor.id]}
                 onBook={() => handleBook(doctor)}
               />
             ))

@@ -5,6 +5,7 @@ import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { HeartPulse } from "lucide-react";
 import ClinicSelect from "../components/ClinicSelect";
+import AgeToggle from "../components/AgeToggle";
 import SpecializationAccordion from "../components/SpecializationAccordion";
 import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
@@ -18,7 +19,9 @@ export default function MainPage() {
 
   const {
     clinicId,
+    isChild,
     setClinicId,
+    setIsChild,
     setSpecializationId,
     setDoctorId,
   } = useBookingStore();
@@ -28,9 +31,12 @@ export default function MainPage() {
     []
   );
 
+  // Age filter: adult=25, child=5 (representative ages for 1C filtering)
+  const ageParam = isChild ? 5 : 25;
+
   const { data: specializations, loading: specsLoading } = useApi<Specialization[]>(
-    () => apiGet("/specializations"),
-    []
+    () => apiGet("/specializations", { age: String(ageParam) }),
+    [ageParam]
   );
 
   // Load doctors (with services structure) to map services to specializations
@@ -129,6 +135,8 @@ export default function MainPage() {
             loading={clinicsLoading}
           />
         )}
+
+        <AgeToggle isChild={isChild} onChange={setIsChild} />
 
         <DoctorSearch
           clinicId={clinicId}
