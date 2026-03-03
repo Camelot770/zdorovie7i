@@ -9,7 +9,7 @@ import SpecializationAccordion from "../components/SpecializationAccordion";
 import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonCard from "../components/ui/SkeletonCard";
-import { groupServicesBySpecialization } from "../utils/prices";
+import { groupServicesBySpecialization, collectServiceIds } from "../utils/prices";
 import type { Clinic, Specialization, Doctor, Service } from "../types";
 
 interface MainPageData {
@@ -17,6 +17,45 @@ interface MainPageData {
   specializations: Specialization[];
   doctors: Doctor[];
   services: Service[];
+}
+
+/**
+ * Try the combined endpoint first; if it fails (404 = backend not deployed yet),
+ * fall back to individual parallel calls.
+ */
+async function fetchMainPageData(): Promise<MainPageData> {
+  try {
+    return await apiGet<MainPageData>("/main-page-data");
+  } catch {
+    // Fallback: load individually (parallel where possible)
+    const [clinics, specializations, doctors] = await Promise.all([
+      apiGet<Clinic[]>("/clinics"),
+      apiGet<Specialization[]>("/specializations"),
+      apiGet<Doctor[]>("/doctors", { include: "specializations,services" }),
+    ]);
+
+    // Collect serviceIds from doctors and load services
+    const ids = collectServiceIds(doctors || []);
+    let services: Service[] = [];
+    if (ids.length > 0) {
+      const CHUNK = 40;
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        chunks.push(ids.slice(i, i + CHUNK));
+      }
+      const results = await Promise.all(
+        chunks.map((c) => apiGet<Service[]>("/services", { serviceIds: c.join(",") }))
+      );
+      services = results.flat();
+    }
+
+    return {
+      clinics: clinics || [],
+      specializations: specializations || [],
+      doctors: doctors || [],
+      services,
+    };
+  }
 }
 
 export default function MainPage() {
@@ -30,9 +69,9 @@ export default function MainPage() {
     setDoctorId,
   } = useBookingStore();
 
-  // Single combined request instead of 4 separate calls
+  // Single call with automatic fallback to individual endpoints
   const { data: mainData, loading } = useApi<MainPageData>(
-    () => apiGet("/main-page-data"),
+    fetchMainPageData,
     []
   );
 
