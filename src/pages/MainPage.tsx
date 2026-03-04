@@ -67,6 +67,7 @@ export default function MainPage() {
     setClinicId,
     setSpecializationId,
     setDoctorId,
+    setServiceIds,
   } = useBookingStore();
 
   // Single call with automatic fallback to individual endpoints
@@ -97,13 +98,15 @@ export default function MainPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, clinics]);
 
-  function handleDoctorSelect(doctor: Doctor) {
+  function handleDoctorSelect(doctor: Doctor, serviceId?: string) {
     const name =
       doctor.name ||
       [doctor.lastName, doctor.firstName, doctor.middleName]
         .filter(Boolean)
         .join(" ");
     setDoctorId(doctor.id, name);
+    // Save selected serviceId (from accordion) or clear it
+    setServiceIds(serviceId || "");
     navigate(`/slots/${doctor.id}`);
   }
 

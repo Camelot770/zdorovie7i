@@ -137,10 +137,12 @@ export default function SlotsPage() {
       if (minP) setPrice(minP);
     }
 
-    // Resolve serviceIds for 1C
-    if (doctorData) {
+    // Resolve serviceIds for 1C: use pre-selected serviceId if available,
+    // otherwise pick the first one for this clinic/spec combination
+    const currentServiceIds = useBookingStore.getState().serviceIds;
+    if (!currentServiceIds && doctorData) {
       const svcIds = collectServiceIds([doctorData], foundClinicId, foundSpecId);
-      setServiceIds(svcIds.join(","));
+      if (svcIds.length > 0) setServiceIds(svcIds[0]);
     }
 
     setAppointmentAt(slot.startAt);
