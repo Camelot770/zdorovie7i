@@ -21,6 +21,7 @@ export default function ConfirmPage() {
     doctorName,
     specializationName,
     price,
+    serviceIds,
   } = useBookingStore();
 
   const dateStr = appointmentAt
@@ -48,7 +49,7 @@ export default function ConfirmPage() {
         doctorId,
         specializationId,
         patientId,
-        serviceIds: "",
+        serviceIds,
       });
       navigate("/success");
     } catch (err) {

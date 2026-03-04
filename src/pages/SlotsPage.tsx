@@ -15,7 +15,7 @@ import type { Schedule, AppointmentSlot, Clinic, Specialization, Doctor, Service
 export default function SlotsPage() {
   const navigate = useNavigate();
   const { doctorId } = useParams<{ doctorId: string }>();
-  const { clinicId, specializationId, setAppointmentAt, setClinicId, setSpecializationId, setDoctorId, setPrice, doctorName } =
+  const { clinicId, specializationId, setAppointmentAt, setClinicId, setSpecializationId, setDoctorId, setPrice, setServiceIds, doctorName } =
     useBookingStore();
 
   const [selectedDate, setSelectedDate] = useState("");
@@ -111,30 +111,36 @@ export default function SlotsPage() {
       setDoctorId(doctorId, docName);
     }
 
+    // Find clinicId and specializationId from the matched schedule
+    const foundClinicId = (() => {
+      for (const s of list) {
+        if (s.isBusy) continue;
+        for (const sl of s.appointmentSlots || []) {
+          if (sl.startAt === slot.startAt) return s.clinicId;
+        }
+      }
+      return undefined;
+    })();
+    const foundSpecId = (() => {
+      for (const s of list) {
+        if (s.isBusy) continue;
+        for (const sl of s.appointmentSlots || []) {
+          if (sl.startAt === slot.startAt) return s.specializationId;
+        }
+      }
+      return undefined;
+    })();
+
     // Set price from this doctor's services (picks min for the matched spec/clinic)
     if (doctorData && priceMap.size > 0) {
-      const foundClinicId = (() => {
-        const list = Array.isArray(schedules) ? schedules : [];
-        for (const s of list) {
-          if (s.isBusy) continue;
-          for (const sl of s.appointmentSlots || []) {
-            if (sl.startAt === slot.startAt) return s.clinicId;
-          }
-        }
-        return undefined;
-      })();
-      const foundSpecId = (() => {
-        const list = Array.isArray(schedules) ? schedules : [];
-        for (const s of list) {
-          if (s.isBusy) continue;
-          for (const sl of s.appointmentSlots || []) {
-            if (sl.startAt === slot.startAt) return s.specializationId;
-          }
-        }
-        return undefined;
-      })();
       const minP = getMinPrice(doctorData, priceMap, foundClinicId, foundSpecId);
       if (minP) setPrice(minP);
+    }
+
+    // Resolve serviceIds for 1C
+    if (doctorData) {
+      const svcIds = collectServiceIds([doctorData], foundClinicId, foundSpecId);
+      setServiceIds(svcIds.join(","));
     }
 
     setAppointmentAt(slot.startAt);
