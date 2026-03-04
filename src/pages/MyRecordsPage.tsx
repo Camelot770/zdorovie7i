@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarPlus, Shield, AlertCircle, UserPlus } from "lucide-react";
-import { apiGetFresh } from "../api/client";
+import { apiGet, apiGetFresh } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
 import RecordCard from "../components/RecordCard";
@@ -10,7 +10,7 @@ import SkeletonList from "../components/ui/SkeletonList";
 import EmptyState from "../components/ui/EmptyState";
 import PullToRefresh from "../components/ui/PullToRefresh";
 import Badge from "../components/ui/Badge";
-import type { Appointment } from "../types";
+import type { Appointment, Doctor, Clinic } from "../types";
 
 function friendlyRecordsError(raw: string): string {
   if (raw.includes("Load failed") || raw.includes("Failed to fetch") || raw.includes("NetworkError")) {
@@ -20,6 +20,11 @@ function friendlyRecordsError(raw: string): string {
     return "Сервер временно недоступен. Попробуйте через минуту.";
   }
   return "Не удалось загрузить список записей. Попробуйте обновить.";
+}
+
+function getDoctorName(doc: Doctor | undefined): string {
+  if (!doc) return "";
+  return doc.name || [doc.lastName, doc.firstName, doc.middleName].filter(Boolean).join(" ");
 }
 
 export default function MyRecordsPage() {
@@ -47,6 +52,28 @@ export default function MyRecordsPage() {
     },
     [patientId]
   );
+
+  // Load doctors & clinics for name resolution (cached from MainPage)
+  const { data: doctors } = useApi<Doctor[]>(
+    () => apiGet<Doctor[]>("/doctors", { limit: "500" }),
+    []
+  );
+  const { data: clinics } = useApi<Clinic[]>(
+    () => apiGet<Clinic[]>("/clinics"),
+    []
+  );
+
+  const doctorMap = useMemo(() => {
+    const map: Record<string, Doctor> = {};
+    (doctors || []).forEach((d) => { map[d.id] = d; });
+    return map;
+  }, [doctors]);
+
+  const clinicMap = useMemo(() => {
+    const map: Record<string, Clinic> = {};
+    (clinics || []).forEach((c) => { map[c.id] = c; });
+    return map;
+  }, [clinics]);
 
   // Sort: active/planned first (by nearest date), canceled at the bottom
   const list = useMemo(() => {
@@ -108,13 +135,19 @@ export default function MyRecordsPage() {
               action={{ label: "Записаться на приём", onClick: () => navigate("/") }}
             />
           ) : (
-            list.map((record) => (
-              <RecordCard
-                key={record.id}
-                record={record}
-                onCancel={() => navigate(`/cancel/${record.id}`)}
-              />
-            ))
+            list.map((record) => {
+              const clinic = record.clinicId ? clinicMap[record.clinicId] : undefined;
+              const clinicLabel = clinic?.shortAddress || clinic?.name || "";
+              return (
+                <RecordCard
+                  key={record.id}
+                  record={record}
+                  doctorName={getDoctorName(doctorMap[record.doctorId || ""])}
+                  clinicName={clinicLabel}
+                  onCancel={!record.canceled ? () => navigate(`/cancel/${record.id}`) : undefined}
+                />
+              );
+            })
           )}
         </div>
       </PullToRefresh>

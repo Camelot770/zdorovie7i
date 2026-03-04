@@ -64,7 +64,7 @@ export default function RecordCard({
         </div>
         <Badge variant={statusVariant}>{statusText}</Badge>
       </div>
-      {onCancel && record.status === "Запланирована" && (
+      {onCancel && !record.canceled && (
         <button
           onClick={onCancel}
           className="w-full flex items-center justify-center gap-1.5 border border-danger-200 text-danger-600 py-2.5 rounded-xl text-sm font-medium hover:bg-danger-50 active:scale-[0.97] transition-all duration-200"
