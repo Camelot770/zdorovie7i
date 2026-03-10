@@ -151,12 +151,14 @@ export default function SlotsPage() {
       if (minP) setPrice(minP);
     }
 
-    // Resolve serviceIds for 1C: use pre-selected serviceId if available,
-    // otherwise pick the first one for this clinic/spec combination
-    const currentServiceIds = useBookingStore.getState().serviceIds;
-    if (!currentServiceIds && doctorData) {
-      const svcIds = collectServiceIds([doctorData], foundClinicId, foundSpecId);
-      if (svcIds.length > 0) setServiceIds(svcIds[0]);
+    // Resolve serviceIds for 1C: validate current serviceId belongs to this clinic/spec,
+    // otherwise pick the first matching one
+    if (doctorData) {
+      const validIds = collectServiceIds([doctorData], foundClinicId, foundSpecId);
+      const currentServiceIds = useBookingStore.getState().serviceIds;
+      if (!currentServiceIds || !validIds.includes(currentServiceIds)) {
+        setServiceIds(validIds.length > 0 ? validIds[0] : "");
+      }
     }
 
     setAppointmentAt(slot.startAt);

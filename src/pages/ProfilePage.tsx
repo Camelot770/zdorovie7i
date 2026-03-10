@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useFavoritesStore } from "../store/favorites";
+import { useBookingStore } from "../store/booking";
 import { apiPost } from "../api/client";
 import PageTransition from "../components/ui/PageTransition";
 import Avatar from "../components/ui/Avatar";
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { patientId, patientName, maxUserId, loading, setPatientId, resetPatient } = useAuth();
   const { favorites } = useFavoritesStore();
+  const resetBooking = useBookingStore((s) => s.reset);
 
   const [linkStep, setLinkStep] = useState<LinkStep>("phone");
   const [linkPhone, setLinkPhone] = useState("+7");
@@ -668,7 +670,7 @@ export default function ProfilePage() {
               {favorites.slice(0, 3).map((doc) => (
                 <button
                   key={doc.id}
-                  onClick={() => navigate(`/slots/${doc.id}`)}
+                  onClick={() => { resetBooking(); navigate(`/slots/${doc.id}`); }}
                   className="w-full flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
                 >
                   <Avatar name={doc.name} size="sm" />

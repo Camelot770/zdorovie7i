@@ -58,7 +58,7 @@ export default function DoctorsPage() {
   const specializationId = searchParams.get("specializationId") || "";
   const showFavorites = searchParams.get("favorites") === "true";
 
-  const { setDoctorId, setClinicId, setSpecializationId, setPrice } = useBookingStore();
+  const { setDoctorId, setClinicId, setSpecializationId, setPrice, setServiceIds } = useBookingStore();
   const { favorites } = useFavoritesStore();
 
   // Fetch doctors
@@ -170,10 +170,12 @@ export default function DoctorsPage() {
         .join(" ");
 
     setDoctorId(doctor.id, name);
-    if (clinicId) setClinicId(clinicId);
-    if (specializationId) setSpecializationId(specializationId);
+    // Always set (or clear) to avoid stale values from prior flows
+    setClinicId(clinicId || "", clinicId ? (clinicsMap[clinicId] || "") : "");
+    setSpecializationId(specializationId || "", specializationId ? (specsMap[specializationId] || "") : "");
+    setServiceIds("");
 
-    const minP = getMinPrice(doctor, priceMap, clinicId || undefined);
+    const minP = getMinPrice(doctor, priceMap, clinicId || undefined, specializationId || undefined);
     if (minP) setPrice(minP);
 
     navigate(`/slots/${doctor.id}`);
