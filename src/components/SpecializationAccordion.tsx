@@ -11,7 +11,7 @@ interface Props {
   servicesBySpec: Record<string, Service[]>;
   doctors: Doctor[];
   clinicId?: string;
-  onSelectDoctor: (doctor: Doctor, serviceId?: string) => void;
+  onSelectDoctor: (doctor: Doctor, serviceId?: string, specId?: string, specName?: string) => void;
   onSelectSpec: (specId: string, specName: string) => void;
   loading?: boolean;
 }
@@ -285,7 +285,7 @@ export default function SpecializationAccordion({
                                   <DoctorMiniCard
                                     key={doc.id}
                                     doctor={doc}
-                                    onBook={() => onSelectDoctor(doc, selectedService?.serviceId)}
+                                    onBook={() => onSelectDoctor(doc, selectedService?.serviceId, spec.id, spec.name)}
                                   />
                                 ))}
                               </div>

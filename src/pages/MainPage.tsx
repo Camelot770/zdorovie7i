@@ -98,13 +98,15 @@ export default function MainPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, clinics]);
 
-  function handleDoctorSelect(doctor: Doctor, serviceId?: string) {
+  function handleDoctorSelect(doctor: Doctor, serviceId?: string, specId?: string, specName?: string) {
     const name =
       doctor.name ||
       [doctor.lastName, doctor.firstName, doctor.middleName]
         .filter(Boolean)
         .join(" ");
     setDoctorId(doctor.id, name);
+    // Save selected specialization (from accordion) so SlotsPage filters schedules correctly
+    if (specId) setSpecializationId(specId, specName || "");
     // Save selected serviceId (from accordion) or clear it
     setServiceIds(serviceId || "");
     navigate(`/slots/${doctor.id}`);
