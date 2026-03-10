@@ -105,8 +105,8 @@ export default function MainPage() {
         .filter(Boolean)
         .join(" ");
     setDoctorId(doctor.id, name);
-    // Save selected specialization (from accordion) so SlotsPage filters schedules correctly
-    if (specId) setSpecializationId(specId, specName || "");
+    // Always set specialization (clear if not provided, e.g. from DoctorSearch)
+    setSpecializationId(specId || "", specName || "");
     // Save selected serviceId (from accordion) or clear it
     setServiceIds(serviceId || "");
     navigate(`/slots/${doctor.id}`);
