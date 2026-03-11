@@ -33,21 +33,26 @@ function getSpecName(
   return "";
 }
 
-/** Extract clinic name for a doctor, given a clinics map. */
+/** Extract clinic name(s) for a doctor, given a clinics map. */
 function getClinicName(
   doctor: Doctor,
   clinicsMap: Record<string, string>,
   filterClinicId?: string
 ): string {
-  for (const cl of doctor.clinics || []) {
-    if (filterClinicId && cl.clinicId === filterClinicId) {
-      return clinicsMap[cl.clinicId] || "";
+  if (filterClinicId) {
+    for (const cl of doctor.clinics || []) {
+      if (cl.clinicId === filterClinicId) {
+        return clinicsMap[cl.clinicId] || "";
+      }
     }
-    if (!filterClinicId && clinicsMap[cl.clinicId]) {
-      return clinicsMap[cl.clinicId];
-    }
+    return "";
   }
-  return "";
+  // No filter — show all clinics the doctor works at
+  const names = (doctor.clinics || [])
+    .map((cl) => clinicsMap[cl.clinicId])
+    .filter(Boolean);
+  const unique = [...new Set(names)];
+  return unique.join(", ");
 }
 
 export default function DoctorsPage() {
