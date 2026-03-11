@@ -33,11 +33,13 @@ function getSpecName(
   return "";
 }
 
-/** Extract clinic name(s) for a doctor, given a clinics map. */
+/** Extract clinic name(s) for a doctor, given a clinics map.
+ *  Excludes «Стационар» clinics (not used for outpatient appointments). */
 function getClinicName(
   doctor: Doctor,
   clinicsMap: Record<string, string>,
-  filterClinicId?: string
+  filterClinicId?: string,
+  stationarIds?: Set<string>
 ): string {
   if (filterClinicId) {
     for (const cl of doctor.clinics || []) {
@@ -47,8 +49,9 @@ function getClinicName(
     }
     return "";
   }
-  // No filter — show all clinics the doctor works at
+  // No filter — show all clinics the doctor works at, excluding Стационар
   const names = (doctor.clinics || [])
+    .filter((cl) => !stationarIds || !stationarIds.has(cl.clinicId))
     .map((cl) => clinicsMap[cl.clinicId])
     .filter(Boolean);
   const unique = [...new Set(names)];
@@ -91,8 +94,13 @@ export default function DoctorsPage() {
   );
 
   const clinicsMap: Record<string, string> = {};
+  const stationarIds = new Set<string>();
   (clinicsData || []).forEach((c) => {
     clinicsMap[c.id] = c.shortAddress || c.name;
+    // Mark inpatient (Стационар) clinics — not used for outpatient appointments
+    if (c.name && /стационар/i.test(c.name)) {
+      stationarIds.add(c.id);
+    }
   });
 
   const specsMap: Record<string, string> = {};
@@ -238,7 +246,7 @@ export default function DoctorsPage() {
                 key={doctor.id}
                 doctor={doctor}
                 specializationName={getSpecName(doctor, specsMap, specializationId || undefined)}
-                clinicName={getClinicName(doctor, clinicsMap, clinicId || undefined)}
+                clinicName={getClinicName(doctor, clinicsMap, clinicId || undefined, stationarIds)}
                 price={getMinPrice(doctor, priceMap, clinicId || undefined)}
                 nearestDate={nearestDateMap[doctor.id]}
                 onBook={() => handleBook(doctor)}
