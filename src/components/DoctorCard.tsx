@@ -7,7 +7,7 @@ import type { Doctor } from "../types";
 interface DoctorCardProps {
   doctor: Doctor;
   specializationName?: string;
-  clinicName?: string;
+  clinicNames?: string[];
   nearestDate?: string;
   price?: number;
   onBook: () => void;
@@ -16,7 +16,7 @@ interface DoctorCardProps {
 export default function DoctorCard({
   doctor,
   specializationName,
-  clinicName,
+  clinicNames,
   nearestDate,
   price,
   onBook,
@@ -72,12 +72,12 @@ export default function DoctorCard({
                 Стаж: {doctor.experience} лет
               </p>
             )}
-            {clinicName && (
-              <p className="flex items-center gap-1.5 text-xs text-gray-500">
+            {clinicNames && clinicNames.length > 0 && clinicNames.map((cn) => (
+              <p key={cn} className="flex items-center gap-1.5 text-xs text-gray-500">
                 <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-                <span className="truncate">{clinicName}</span>
+                <span className="truncate">{cn}</span>
               </p>
-            )}
+            ))}
             {price != null && price > 0 && (
               <p className="flex items-center gap-1.5 text-xs text-primary-700 font-medium">
                 <Banknote className="w-3.5 h-3.5 flex-shrink-0" />
