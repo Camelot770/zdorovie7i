@@ -4,6 +4,7 @@ import { apiGet } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { HeartPulse } from "lucide-react";
+import AgeToggle from "../components/AgeToggle";
 import ClinicSelect from "../components/ClinicSelect";
 import SpecializationAccordion from "../components/SpecializationAccordion";
 import DoctorSearch from "../components/DoctorSearch";
@@ -63,6 +64,8 @@ export default function MainPage() {
   const [searchParams] = useSearchParams();
 
   const {
+    isChild,
+    setIsChild,
     clinicId,
     setClinicId,
     setSpecializationId,
@@ -77,9 +80,19 @@ export default function MainPage() {
   );
 
   const clinics = mainData?.clinics || [];
-  const specializations = mainData?.specializations || [];
+  const allSpecializations = mainData?.specializations || [];
   const doctors = mainData?.doctors || [];
   const services = mainData?.services || [];
+
+  // Filter specializations by patient age (child <18, adult >=18)
+  const specializations = useMemo(() => {
+    const patientAge = isChild ? 10 : 30; // representative age for filtering
+    return allSpecializations.filter((s) => {
+      const from = s.ageFrom ?? 0;
+      const to = s.ageTo ?? 999;
+      return patientAge >= from && patientAge <= to;
+    });
+  }, [allSpecializations, isChild]);
 
   // Build specialization → services mapping
   const servicesBySpec = useMemo(
@@ -134,6 +147,8 @@ export default function MainPage() {
             <p className="text-[12px] text-white/80 mt-0.5">Выберите специальность или найдите врача</p>
           </div>
         </div>
+
+        <AgeToggle isChild={isChild} onChange={setIsChild} />
 
         {loading ? (
           <SkeletonCard lines={2} />
