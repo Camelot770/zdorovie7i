@@ -10,7 +10,7 @@ import SkeletonList from "../components/ui/SkeletonList";
 import EmptyState from "../components/ui/EmptyState";
 import PullToRefresh from "../components/ui/PullToRefresh";
 import Badge from "../components/ui/Badge";
-import type { Appointment, Doctor, Clinic } from "../types";
+import type { Appointment, Doctor, Clinic, Specialization } from "../types";
 
 function friendlyRecordsError(raw: string): string {
   if (raw.includes("Load failed") || raw.includes("Failed to fetch") || raw.includes("NetworkError")) {
@@ -62,6 +62,10 @@ export default function MyRecordsPage() {
     () => apiGet<Clinic[]>("/clinics"),
     []
   );
+  const { data: specializations } = useApi<Specialization[]>(
+    () => apiGet<Specialization[]>("/specializations"),
+    []
+  );
 
   const doctorMap = useMemo(() => {
     const map: Record<string, Doctor> = {};
@@ -74,6 +78,12 @@ export default function MyRecordsPage() {
     (clinics || []).forEach((c) => { map[c.id] = c; });
     return map;
   }, [clinics]);
+
+  const specMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (specializations || []).forEach((s) => { map[s.id] = s.name; });
+    return map;
+  }, [specializations]);
 
   // Filter out cancelled, sort by nearest date first
   const list = useMemo(() => {
@@ -140,6 +150,7 @@ export default function MyRecordsPage() {
                   key={record.id}
                   record={record}
                   doctorName={getDoctorName(doctorMap[record.doctorId || ""])}
+                  specializationName={record.specializationId ? specMap[record.specializationId] || "" : ""}
                   clinicName={clinicLabel}
                   onCancel={() => navigate(`/cancel/${record.id}`)}
                 />
