@@ -9,6 +9,7 @@ import SuccessPage from "./pages/SuccessPage";
 import MyRecordsPage from "./pages/MyRecordsPage";
 import CancelPage from "./pages/CancelPage";
 import ProfilePage from "./pages/ProfilePage";
+import BookingWizardPage from "./pages/BookingWizardPage";
 
 export default function App() {
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<MainPage />} />
+          <Route path="/booking" element={<BookingWizardPage />} />
           <Route path="/doctors" element={<DoctorsPage />} />
           <Route path="/slots/:doctorId" element={<SlotsPage />} />
           <Route path="/confirm" element={<ConfirmPage />} />
