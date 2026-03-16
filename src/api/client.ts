@@ -1,4 +1,4 @@
-import type { Clinic, Specialization, Doctor, Schedule, Appointment, Service, Patient } from "../types";
+import type { Clinic, Specialization, Doctor, Schedule, Appointment, Service, Patient, LinkedPatient } from "../types";
 
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
@@ -159,6 +159,18 @@ export const api = {
     }>(`/auth/link/${patientId}?max_user_id=${maxUserId}`),
   getPatientByUser: (maxUserId: string) =>
     apiGet<{ patientId: string }>(`/auth/patient/${maxUserId}`),
+  getLinkedPatients: (maxUserId: string) =>
+    apiGetFresh<LinkedPatient[]>(`/auth/patients/${maxUserId}`),
+  registerPatient: (body: {
+    max_user_id: string;
+    lastName: string;
+    firstName: string;
+    middleName?: string;
+    noMiddleName?: boolean;
+    gender: string;
+    birthDate: string;
+    phone: string;
+  }) => apiPost<{ status: string; patientId: string; fullName: string }>("/auth/register", body),
 
   // ---- Health ----
   health: () => apiGet<{ status: string }>("/health"),

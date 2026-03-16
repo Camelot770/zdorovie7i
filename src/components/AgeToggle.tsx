@@ -11,7 +11,7 @@ export default function AgeToggle({ isChild, onChange }: AgeToggleProps) {
   return (
     <div className="relative flex rounded-xl bg-gray-100 p-1">
       <motion.div
-        className="absolute top-1 bottom-1 rounded-lg bg-primary-600 shadow-sm"
+        className="absolute top-1 bottom-1 rounded-lg bg-primary-600 shadow-sm pointer-events-none"
         layoutId="age-toggle"
         style={{ width: "calc(50% - 4px)" }}
         animate={{ x: isChild ? "calc(100% + 4px)" : 0 }}

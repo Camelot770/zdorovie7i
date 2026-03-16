@@ -40,18 +40,25 @@ export function buildPriceMap(services: Service[]): Map<string, number> {
 /** Regex matching consultation/appointment service names */
 const CONSULT_RE = /при[её]м|консультаци/i;
 
+/** Regex matching primary (первичный) appointment */
+const PRIMARY_RE = /первичн/i;
+
 /**
- * Build a price map limited to consultation/appointment services.
- * Excludes procedures, injections, etc. so we show "Приём от X ₽".
+ * Build a price map limited to primary consultation/appointment services.
+ * Prefers "первичный" appointments; falls back to any consultation if no primary found.
  */
 export function buildConsultPriceMap(services: Service[]): Map<string, number> {
-  const map = new Map<string, number>();
+  const primary = new Map<string, number>();
+  const any = new Map<string, number>();
   for (const svc of services) {
     if (svc.price != null && svc.price > 0 && CONSULT_RE.test(svc.name || "")) {
-      map.set(svc.id, svc.price);
+      any.set(svc.id, svc.price);
+      if (PRIMARY_RE.test(svc.name || "")) {
+        primary.set(svc.id, svc.price);
+      }
     }
   }
-  return map;
+  return primary.size > 0 ? primary : any;
 }
 
 /**
@@ -67,13 +74,18 @@ export function groupServicesBySpecialization(
   services: Service[],
   clinicId?: string
 ): Record<string, Service[]> {
-  // 1. Build serviceId → Service lookup (consultations only)
-  const svcLookup = new Map<string, Service>();
+  // 1. Build serviceId → Service lookup (primary consultations preferred)
+  const primaryLookup = new Map<string, Service>();
+  const anyLookup = new Map<string, Service>();
   for (const svc of services) {
     if (svc.price != null && svc.price > 0 && CONSULT_RE.test(svc.name || "")) {
-      svcLookup.set(svc.id, svc);
+      anyLookup.set(svc.id, svc);
+      if (PRIMARY_RE.test(svc.name || "")) {
+        primaryLookup.set(svc.id, svc);
+      }
     }
   }
+  const svcLookup = primaryLookup.size > 0 ? primaryLookup : anyLookup;
 
   // 2. Collect serviceIds per specializationId from doctor data
   const specSvcIds: Record<string, Set<string>> = {};
