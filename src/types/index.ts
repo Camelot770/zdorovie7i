@@ -102,7 +102,14 @@ export interface Appointment {
   doctorId?: string;
   specializationId?: string;
   patientId?: string;
+  patientName?: string;
   services?: RecordService[];
+}
+
+export interface LinkedPatient {
+  patientId: string;
+  fullName: string;
+  birthDate?: string;
 }
 
 export interface Service {

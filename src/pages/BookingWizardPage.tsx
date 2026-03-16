@@ -33,6 +33,7 @@ import type {
   Schedule,
   AppointmentSlot,
   Patient,
+  LinkedPatient,
 } from "../types";
 
 // ─── Step definitions ───
@@ -85,6 +86,10 @@ export default function BookingWizardPage() {
   const [selectedServiceIds, setSelectedServiceIds] = useState("");
   const [selectedPrice, setSelectedPrice] = useState(0);
 
+  // Linked patients list
+  const [linkedPatients, setLinkedPatients] = useState<LinkedPatient[]>([]);
+  const [linkedPatientsLoading, setLinkedPatientsLoading] = useState(false);
+
   // Phone linking state
   const [phoneInput, setPhoneInput] = useState("");
   const [phoneLinking, setPhoneLinking] = useState(false);
@@ -92,17 +97,44 @@ export default function BookingWizardPage() {
   const [foundPatients, setFoundPatients] = useState<Patient[]>([]);
   const [showPhoneForm, setShowPhoneForm] = useState(false);
 
+  // New patient registration form
+  const [showRegisterForm, setShowRegisterForm] = useState(false);
+  const [regLastName, setRegLastName] = useState("");
+  const [regFirstName, setRegFirstName] = useState("");
+  const [regMiddleName, setRegMiddleName] = useState("");
+  const [regGender, setRegGender] = useState("");
+  const [regBirthDate, setRegBirthDate] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [registering, setRegistering] = useState(false);
+  const [regError, setRegError] = useState("");
+
   // Submission
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  // Auto-select patient if already authenticated
+  // Load linked patients list
   useEffect(() => {
-    if (patientId && patientName && !selectedPatientId) {
-      setSelectedPatientId(patientId);
-      setSelectedPatientName(patientName);
-    }
-  }, [patientId, patientName, selectedPatientId]);
+    if (!maxUserId || linkedPatients.length > 0 || linkedPatientsLoading) return;
+    setLinkedPatientsLoading(true);
+    apiGetFresh<LinkedPatient[]>(`/auth/patients/${maxUserId}`)
+      .then((pts) => {
+        setLinkedPatients(pts || []);
+        // Auto-select if only one patient
+        if (pts && pts.length === 1 && !selectedPatientId) {
+          setSelectedPatientId(pts[0].patientId);
+          setSelectedPatientName(pts[0].fullName);
+        }
+      })
+      .catch(() => {
+        // Fallback to single patient from auth
+        if (patientId && patientName && !selectedPatientId) {
+          setSelectedPatientId(patientId);
+          setSelectedPatientName(patientName);
+        }
+      })
+      .finally(() => setLinkedPatientsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxUserId]);
 
   // ─── Data loading ───
   const { data: specializations, loading: specsLoading } = useApi<Specialization[]>(
@@ -400,13 +432,134 @@ export default function BookingWizardPage() {
     );
   }
 
+  // ─── Register new patient ───
+  async function handleRegisterPatient() {
+    if (!maxUserId || !regLastName || !regFirstName || !regGender || !regBirthDate) return;
+    setRegistering(true);
+    setRegError("");
+    try {
+      const result = await apiPost<{ status: string; patientId: string; fullName: string }>(
+        "/auth/register",
+        {
+          max_user_id: maxUserId,
+          lastName: regLastName,
+          firstName: regFirstName,
+          middleName: regMiddleName || undefined,
+          noMiddleName: !regMiddleName,
+          gender: regGender,
+          birthDate: regBirthDate,
+          phone: regPhone.replace(/\D/g, ""),
+        }
+      );
+      setSelectedPatientId(result.patientId);
+      setSelectedPatientName(result.fullName);
+      // Add to linked list
+      setLinkedPatients((prev) => [
+        ...prev,
+        { patientId: result.patientId, fullName: result.fullName, birthDate: regBirthDate },
+      ]);
+      setShowRegisterForm(false);
+    } catch {
+      setRegError("Ошибка создания пациента. Попробуйте позже.");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
   // ─── Step: Patient ───
   function PatientStep() {
-    if (authLoading) {
+    if (authLoading || linkedPatientsLoading) {
       return <SkeletonCard lines={3} />;
     }
 
-    // Already selected
+    // Registration form
+    if (showRegisterForm) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-700">Новый пациент</p>
+          <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
+            <input
+              value={regLastName}
+              onChange={(e) => setRegLastName(e.target.value)}
+              placeholder="Фамилия *"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+            />
+            <input
+              value={regFirstName}
+              onChange={(e) => setRegFirstName(e.target.value)}
+              placeholder="Имя *"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+            />
+            <input
+              value={regMiddleName}
+              onChange={(e) => setRegMiddleName(e.target.value)}
+              placeholder="Отчество"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRegGender("male")}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-all ${
+                  regGender === "male"
+                    ? "border-primary-500 bg-primary-50 text-primary-700"
+                    : "border-gray-200 text-gray-600"
+                }`}
+              >
+                Мужской
+              </button>
+              <button
+                onClick={() => setRegGender("female")}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-all ${
+                  regGender === "female"
+                    ? "border-primary-500 bg-primary-50 text-primary-700"
+                    : "border-gray-200 text-gray-600"
+                }`}
+              >
+                Женский
+              </button>
+            </div>
+            <input
+              type="date"
+              value={regBirthDate}
+              onChange={(e) => setRegBirthDate(e.target.value)}
+              placeholder="Дата рождения *"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+            />
+            <input
+              type="tel"
+              value={regPhone}
+              onChange={(e) => setRegPhone(e.target.value)}
+              placeholder="Телефон (необязательно)"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+            />
+            {regError && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> {regError}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleRegisterPatient}
+            disabled={registering || !regLastName || !regFirstName || !regGender || !regBirthDate}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white py-3 rounded-xl font-semibold shadow-md shadow-primary-600/30 active:scale-[0.97] transition-all disabled:opacity-50"
+          >
+            {registering ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Сохранение...</>
+            ) : (
+              "Создать пациента"
+            )}
+          </button>
+          <button
+            onClick={() => setShowRegisterForm(false)}
+            className="w-full text-sm text-gray-500 py-2"
+          >
+            Назад
+          </button>
+        </div>
+      );
+    }
+
+    // Already selected — show selected + option to change
     if (selectedPatientId && selectedPatientName && !showPhoneForm) {
       return (
         <div className="space-y-3">
@@ -428,17 +581,71 @@ export default function BookingWizardPage() {
             Далее
             <ChevronRight className="w-4 h-4" />
           </button>
+          {linkedPatients.length > 1 && (
+            <button
+              onClick={() => {
+                setSelectedPatientId(null);
+                setSelectedPatientName("");
+              }}
+              className="w-full text-sm text-gray-500 py-2"
+            >
+              Выбрать другого пациента
+            </button>
+          )}
+          {linkedPatients.length <= 1 && (
+            <button
+              onClick={() => setShowPhoneForm(true)}
+              className="w-full text-sm text-gray-500 py-2"
+            >
+              Выбрать другого пациента
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // Multiple linked patients — show list to pick from
+    if (linkedPatients.length > 1 && !showPhoneForm) {
+      return (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600 font-medium">Выберите пациента:</p>
+          {linkedPatients.map((p) => (
+            <button
+              key={p.patientId}
+              onClick={() => {
+                setSelectedPatientId(p.patientId);
+                setSelectedPatientName(p.fullName);
+              }}
+              className="w-full bg-white rounded-xl p-3.5 shadow-card border border-gray-100 text-left flex items-center gap-3 active:scale-[0.98] transition-all hover:border-primary-300"
+            >
+              <Avatar name={p.fullName} size="md" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm">{p.fullName}</p>
+                {p.birthDate && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {p.birthDate.includes("-")
+                      ? p.birthDate.split("-").reverse().join(".")
+                      : p.birthDate}
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </button>
+          ))}
           <button
-            onClick={() => setShowPhoneForm(true)}
-            className="w-full text-sm text-gray-500 py-2"
+            onClick={() => setShowRegisterForm(true)}
+            className="w-full bg-white rounded-xl p-3.5 shadow-card border border-dashed border-primary-300 text-left flex items-center gap-3 active:scale-[0.98] transition-all hover:border-primary-500"
           >
-            Выбрать другого пациента
+            <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary-600" />
+            </div>
+            <p className="font-medium text-primary-600 text-sm">Добавить нового пациента</p>
           </button>
         </div>
       );
     }
 
-    // Show found patients list
+    // Show found patients list (from phone search)
     if (foundPatients.length > 0) {
       return (
         <div className="space-y-3">
@@ -480,7 +687,7 @@ export default function BookingWizardPage() {
       );
     }
 
-    // Phone form
+    // Phone form (no linked patients or user wants to search)
     return (
       <div className="space-y-4">
         <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
@@ -521,6 +728,12 @@ export default function BookingWizardPage() {
               <ChevronRight className="w-4 h-4" />
             </>
           )}
+        </button>
+        <button
+          onClick={() => setShowRegisterForm(true)}
+          className="w-full text-sm text-primary-600 py-2 font-medium"
+        >
+          Создать нового пациента
         </button>
         {selectedPatientId && (
           <button
@@ -749,7 +962,7 @@ export default function BookingWizardPage() {
                   )}
                   {price != null && price > 0 && (
                     <span className="text-xs text-primary-600 font-medium">
-                      от {price.toLocaleString("ru-RU")} ₽
+                      {price.toLocaleString("ru-RU")} ₽
                     </span>
                   )}
                 </div>
@@ -844,7 +1057,7 @@ export default function BookingWizardPage() {
       {
         icon: Clock,
         label: "Стоимость",
-        value: selectedPrice ? `от ${selectedPrice.toLocaleString("ru-RU")} ₽` : undefined,
+        value: selectedPrice ? `${selectedPrice.toLocaleString("ru-RU")} ₽` : undefined,
       },
     ].filter((d) => d.value);
 

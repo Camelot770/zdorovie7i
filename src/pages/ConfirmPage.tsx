@@ -68,7 +68,7 @@ export default function ConfirmPage() {
     { icon: Stethoscope, label: "Специальность", value: specializationName },
     { icon: Calendar, label: "Дата и время", value: dateStr ? `${dateStr}, ${timeStr}` : null },
     { icon: Building2, label: "Филиал", value: clinicName },
-    { icon: Banknote, label: "Стоимость", value: price ? `от ${price.toLocaleString("ru-RU")} ₽` : null },
+    { icon: Banknote, label: "Стоимость", value: price ? `${price.toLocaleString("ru-RU")} ₽` : null },
   ].filter((d) => d.value);
 
   return (

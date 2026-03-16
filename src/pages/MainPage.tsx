@@ -177,9 +177,6 @@ export default function MainPage() {
           <SpecializationAccordion
             specializations={specializations}
             servicesBySpec={servicesBySpec}
-            doctors={doctors}
-            clinicId={clinicId || undefined}
-            onSelectDoctor={handleDoctorSelect}
             onSelectSpec={handleSpecSelect}
           />
         )}

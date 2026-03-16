@@ -43,14 +43,19 @@ export default function MyRecordsPage() {
     refetch,
   } = useApi<Appointment[]>(
     () => {
-      if (!patientId) return Promise.resolve([]);
-      return apiGetFresh("/records", {
+      if (!maxUserId && !patientId) return Promise.resolve([]);
+      const params: Record<string, string> = {
         beginDate: today,
         endDate: end,
-        patientId,
-      });
+      };
+      if (maxUserId) {
+        params.maxUserId = maxUserId;
+      } else if (patientId) {
+        params.patientId = patientId;
+      }
+      return apiGetFresh("/records", params);
     },
-    [patientId]
+    [maxUserId, patientId]
   );
 
   // Load doctors & clinics for name resolution (cached from MainPage)
@@ -152,6 +157,7 @@ export default function MyRecordsPage() {
                   doctorName={getDoctorName(doctorMap[record.doctorId || ""])}
                   specializationName={record.specializationId ? specMap[record.specializationId] || "" : ""}
                   clinicName={clinicLabel}
+                  patientName={record.patientName}
                   onCancel={() => navigate(`/cancel/${record.id}`)}
                 />
               );

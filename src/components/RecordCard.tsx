@@ -1,4 +1,4 @@
-import { Clock, User, Building2, Stethoscope, X } from "lucide-react";
+import { Clock, User, Users, Building2, Stethoscope, X } from "lucide-react";
 import Badge from "./ui/Badge";
 import type { Appointment } from "../types";
 
@@ -7,6 +7,7 @@ interface RecordCardProps {
   clinicName?: string;
   doctorName?: string;
   specializationName?: string;
+  patientName?: string;
   onCancel?: () => void;
 }
 
@@ -15,6 +16,7 @@ export default function RecordCard({
   clinicName,
   doctorName,
   specializationName,
+  patientName,
   onCancel,
 }: RecordCardProps) {
   const appt = record.appointmentAt || "";
@@ -67,6 +69,12 @@ export default function RecordCard({
             <p className="flex items-center gap-1.5 text-xs text-gray-500 ml-10">
               <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
               <span className="truncate">{clinicName}</span>
+            </p>
+          )}
+          {patientName && (
+            <p className="flex items-center gap-1.5 text-xs text-gray-500 ml-10">
+              <Users className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <span className="truncate">{patientName}</span>
             </p>
           )}
         </div>

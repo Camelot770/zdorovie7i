@@ -81,7 +81,7 @@ export default function DoctorCard({
             {price != null && price > 0 && (
               <p className="flex items-center gap-1.5 text-xs text-primary-700 font-medium">
                 <Banknote className="w-3.5 h-3.5 flex-shrink-0" />
-                Приём от {price} ₽
+                Приём {price} ₽
               </p>
             )}
             {nearestDate && (
