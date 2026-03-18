@@ -94,6 +94,31 @@ export default function MainPage() {
     });
   }, [allSpecializations, isChild]);
 
+  // Filter clinics: only show clinics that have doctors with age-matching specializations
+  const filteredClinics = useMemo(() => {
+    const patientAge = isChild ? 10 : 30;
+    const clinicIdsWithDocs = new Set<string>();
+    for (const doc of doctors) {
+      for (const cl of doc.clinics || []) {
+        for (const sp of cl.specializations || []) {
+          const from = sp.ageFrom ?? 0;
+          const to = sp.ageTo ?? 999;
+          if (patientAge >= from && patientAge <= to) {
+            clinicIdsWithDocs.add(cl.clinicId);
+          }
+        }
+      }
+    }
+    return clinics.filter((c) => clinicIdsWithDocs.has(c.id));
+  }, [clinics, doctors, isChild]);
+
+  // Reset clinic selection if current clinic is not in filtered list
+  useEffect(() => {
+    if (clinicId && filteredClinics.length > 0 && !filteredClinics.some((c) => c.id === clinicId)) {
+      setClinicId("", "");
+    }
+  }, [filteredClinics, clinicId, setClinicId]);
+
   // Build specialization → services mapping
   const servicesBySpec = useMemo(
     () => groupServicesBySpecialization(doctors, services, clinicId || undefined),
@@ -155,7 +180,7 @@ export default function MainPage() {
           <SkeletonCard lines={2} />
         ) : (
           <ClinicSelect
-            clinics={clinics}
+            clinics={filteredClinics}
             value={clinicId}
             onChange={setClinicId}
             loading={false}
