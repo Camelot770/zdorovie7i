@@ -263,7 +263,7 @@ export default function DoctorsPage() {
                 doctor={doctor}
                 specializationName={getSpecName(doctor, specsMap, specializationId || undefined)}
                 clinicNames={getClinicNames(doctor, clinicsMap, clinicId || undefined, stationarIds)}
-                price={getMinPrice(doctor, priceMap, clinicId || undefined)}
+                price={getMinPrice(doctor, priceMap, clinicId || undefined, specializationId || undefined)}
                 nearestDate={nearestDateMap[doctor.id]}
                 onBook={() => handleBook(doctor)}
               />

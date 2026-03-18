@@ -759,7 +759,13 @@ export default function BookingWizardPage() {
       );
     }
 
-    const specs = specializations || [];
+    // Filter specializations by patient age
+    const patientAge = bookingStore.isChild ? 10 : 30;
+    const specs = (specializations || []).filter((s) => {
+      const from = s.ageFrom ?? 0;
+      const to = s.ageTo ?? 999;
+      return patientAge >= from && patientAge <= to;
+    });
 
     return (
       <div className="space-y-2">
