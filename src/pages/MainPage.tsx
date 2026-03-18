@@ -130,6 +130,7 @@ export default function MainPage() {
     const params = new URLSearchParams();
     if (clinicId) params.set("clinicId", clinicId);
     params.set("specializationId", specId);
+    if (isChild) params.set("isChild", "true");
     navigate(`/doctors?${params.toString()}`);
   }
 

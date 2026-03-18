@@ -66,6 +66,7 @@ export default function DoctorsPage() {
   const clinicId = searchParams.get("clinicId") || "";
   const specializationId = searchParams.get("specializationId") || "";
   const showFavorites = searchParams.get("favorites") === "true";
+  const isChild = searchParams.get("isChild") === "true";
 
   const { setDoctorId, setClinicId, setSpecializationId, setPrice, setServiceIds } = useBookingStore();
   const { favorites } = useFavoritesStore();
@@ -196,6 +197,20 @@ export default function DoctorsPage() {
   }
 
   let list = Array.isArray(doctors) ? doctors : [];
+
+  // Filter doctors by patient age when isChild flag is set
+  if (isChild && specializationId) {
+    const patientAge = 10; // representative child age
+    list = list.filter((d) =>
+      (d.clinics || []).some((cl) =>
+        (cl.specializations || []).some((s) => {
+          const from = s.ageFrom ?? 0;
+          const to = s.ageTo ?? 999;
+          return s.specializationId === specializationId && patientAge >= from && patientAge <= to;
+        })
+      )
+    );
+  }
 
   // Filter to favorites if requested
   if (showFavorites) {
