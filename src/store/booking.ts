@@ -41,7 +41,7 @@ const initial = {
 
 export const useBookingStore = create<BookingState>((set) => ({
   ...initial,
-  setIsChild: (v) => set({ isChild: v }),
+  setIsChild: (v) => set({ isChild: v, specializationId: "", specializationName: "", doctorId: "", doctorName: "", serviceIds: "", price: 0 }),
   setClinicId: (id, name) => set({ clinicId: id, clinicName: name || "" }),
   setSpecializationId: (id, name) => set({ specializationId: id, specializationName: name || "" }),
   setDoctorId: (id, name) => set({ doctorId: id, doctorName: name || "" }),
