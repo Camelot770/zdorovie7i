@@ -25,6 +25,28 @@ export function collectServiceIds(
 }
 
 /**
+ * From a list of all serviceIds and loaded services,
+ * find the best consultation service (primary first, then any consult).
+ */
+export function findBestConsultServiceId(
+  allServiceIds: string[],
+  services: Service[]
+): string {
+  const svcMap = new Map(services.map((s) => [s.id, s]));
+  let anyConsult = "";
+  for (const sid of allServiceIds) {
+    const svc = svcMap.get(sid);
+    if (!svc) continue;
+    const name = svc.name || "";
+    if (CONSULT_RE.test(name)) {
+      if (PRIMARY_RE.test(name)) return sid; // best match — return immediately
+      if (!anyConsult) anyConsult = sid;
+    }
+  }
+  return anyConsult || allServiceIds[0] || "";
+}
+
+/**
  * Build a Map<serviceId, price> from a services array.
  */
 export function buildPriceMap(services: Service[]): Map<string, number> {
@@ -85,7 +107,8 @@ export function groupServicesBySpecialization(
       }
     }
   }
-  const svcLookup = primaryLookup.size > 0 ? primaryLookup : anyLookup;
+  // Use both lookups — prefer primary per specialization, fall back to any
+  const svcLookup = new Map([...anyLookup, ...primaryLookup]);
 
   // 2. Collect serviceIds per specializationId from doctor data
   const specSvcIds: Record<string, Set<string>> = {};
