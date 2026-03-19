@@ -19,7 +19,7 @@ import { apiGet, apiGetFresh, apiPost } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useAuth } from "../hooks/useAuth";
 import { useBookingStore } from "../store/booking";
-import { collectServiceIds, buildConsultPriceMap, getMinPrice } from "../utils/prices";
+import { collectServiceIds, buildConsultPriceMap, getMinPrice, findBestConsultServiceId } from "../utils/prices";
 import Calendar from "../components/Calendar";
 import TimeSlots from "../components/TimeSlots";
 import Avatar from "../components/ui/Avatar";
@@ -374,7 +374,9 @@ export default function BookingWizardPage() {
           selectedClinicId || undefined,
           selectedSpecId || undefined
         );
-        setSelectedServiceIds(validIds.length > 0 ? validIds[0] : "");
+        // Pick the best consultation service, not just the first one
+        const bestId = findBestConsultServiceId(validIds, servicesData || []);
+        setSelectedServiceIds(bestId);
         const minP = getMinPrice(
           doc,
           priceMap,
