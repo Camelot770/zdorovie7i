@@ -89,6 +89,7 @@ export default function BookingWizardPage() {
   // Linked patients list
   const [linkedPatients, setLinkedPatients] = useState<LinkedPatient[]>([]);
   const [linkedPatientsLoading, setLinkedPatientsLoading] = useState(false);
+  const [linkedPatientsFetched, setLinkedPatientsFetched] = useState(false);
 
   // Phone linking state
   const [phoneInput, setPhoneInput] = useState("");
@@ -114,7 +115,7 @@ export default function BookingWizardPage() {
 
   // Load linked patients list
   useEffect(() => {
-    if (!maxUserId || linkedPatients.length > 0 || linkedPatientsLoading) return;
+    if (!maxUserId || linkedPatientsFetched || linkedPatientsLoading) return;
     setLinkedPatientsLoading(true);
     apiGetFresh<LinkedPatient[]>(`/auth/patients/${maxUserId}`)
       .then((pts) => {
@@ -132,7 +133,10 @@ export default function BookingWizardPage() {
           setSelectedPatientName(patientName);
         }
       })
-      .finally(() => setLinkedPatientsLoading(false));
+      .finally(() => {
+        setLinkedPatientsLoading(false);
+        setLinkedPatientsFetched(true);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxUserId]);
 
