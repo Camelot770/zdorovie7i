@@ -93,7 +93,6 @@ export default function BookingWizardPage() {
   const [linkedPatientsFetched, setLinkedPatientsFetched] = useState(false);
 
   // Phone linking state
-  const [phoneInput, setPhoneInput] = useState("");
   const [phoneLinking, setPhoneLinking] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [foundPatients, setFoundPatients] = useState<Patient[]>([]);
@@ -272,7 +271,6 @@ export default function BookingWizardPage() {
     window.WebApp.requestContact((sent, contact) => {
       if (!sent || !contact?.phone_number) return;
       const phone = contact.phone_number.replace(/\D/g, "");
-      setPhoneInput(phone);
       doPhoneLink(phone);
     });
   }
@@ -696,7 +694,6 @@ export default function BookingWizardPage() {
           <button
             onClick={() => {
               setFoundPatients([]);
-              setPhoneInput("");
             }}
             className="w-full text-sm text-gray-500 py-2"
           >
