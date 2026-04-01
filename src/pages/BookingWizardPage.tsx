@@ -268,11 +268,24 @@ export default function BookingWizardPage() {
       setPhoneError("Откройте приложение через бот в MAX для привязки номера.");
       return;
     }
-    window.WebApp.requestContact((sent, contact) => {
-      if (!sent || !contact?.phone_number) return;
-      const phone = contact.phone_number.replace(/\D/g, "");
-      doPhoneLink(phone);
-    });
+    try {
+      // MAX WebApp: requestContact() takes no args, result comes via event
+      const handler = (data: { phone?: string }) => {
+        console.log("WebAppRequestPhone event:", data);
+        window.WebApp?.offEvent?.("WebAppRequestPhone", handler);
+        const phone = (data?.phone || "").replace(/\D/g, "");
+        if (!phone) {
+          setPhoneError("Не удалось получить номер телефона. Попробуйте ещё раз.");
+          return;
+        }
+        doPhoneLink(phone);
+      };
+      window.WebApp.onEvent?.("WebAppRequestPhone", handler);
+      window.WebApp.requestContact();
+    } catch (e) {
+      console.error("requestContact error:", e);
+      setPhoneError("Ошибка при запросе контакта. Попробуйте ещё раз.");
+    }
   }
 
   async function doPhoneLink(phone: string) {

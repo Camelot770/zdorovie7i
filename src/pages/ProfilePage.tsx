@@ -115,12 +115,25 @@ export default function ProfilePage() {
       setError("Откройте приложение через бот в MAX для привязки номера.");
       return;
     }
-    window.WebApp.requestContact((sent, contact) => {
-      if (!sent || !contact?.phone_number) return;
-      const phone = contact.phone_number.replace(/\D/g, "");
-      setLinkPhone(phone);
-      doLink(phone);
-    });
+    try {
+      // MAX WebApp: requestContact() takes no args, result comes via event
+      const handler = (data: { phone?: string }) => {
+        console.log("WebAppRequestPhone event:", data);
+        window.WebApp?.offEvent?.("WebAppRequestPhone", handler);
+        const phone = (data?.phone || "").replace(/\D/g, "");
+        if (!phone) {
+          setError("Не удалось получить номер телефона. Попробуйте ещё раз.");
+          return;
+        }
+        setLinkPhone(phone);
+        doLink(phone);
+      };
+      window.WebApp.onEvent?.("WebAppRequestPhone", handler);
+      window.WebApp.requestContact();
+    } catch (e) {
+      console.error("requestContact error:", e);
+      setError("Ошибка при запросе контакта. Попробуйте ещё раз.");
+    }
   }
 
   async function doLink(phone: string) {
