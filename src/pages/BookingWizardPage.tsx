@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Clock,
   Phone,
+  Shield,
 } from "lucide-react";
 import { apiGet, apiGetFresh, apiPost } from "../api/client";
 import { useApi } from "../hooks/useApi";
@@ -262,15 +263,27 @@ export default function BookingWizardPage() {
     }
   }
 
-  // ─── Phone linking ───
-  async function handlePhoneLink() {
-    if (!maxUserId || phoneInput.length < 10) return;
+  // ─── Phone linking via contact sharing (secure) ───
+  function handleShareContact() {
+    if (!window.WebApp?.requestContact) {
+      setPhoneError("Функция недоступна. Откройте приложение через MAX.");
+      return;
+    }
+    window.WebApp.requestContact((sent, contact) => {
+      if (!sent || !contact?.phone_number) return;
+      const phone = contact.phone_number.replace(/\D/g, "");
+      setPhoneInput(phone);
+      doPhoneLink(phone);
+    });
+  }
+
+  async function doPhoneLink(phone: string) {
+    if (!maxUserId) return;
     setPhoneLinking(true);
     setPhoneError("");
     setFoundPatients([]);
 
     try {
-      const phone = phoneInput.replace(/\D/g, "").replace(/^8/, "7");
       const result = await apiPost<{
         status: string;
         patientId?: string;
@@ -285,7 +298,7 @@ export default function BookingWizardPage() {
       } else if (result.status === "multiple" && result.patients) {
         setFoundPatients(result.patients);
       } else {
-        setPhoneError("Пациент не найден. Обратитесь в клинику для регистрации.");
+        setPhoneError("Пациент не найден. Зарегистрируйте нового пациента.");
       }
     } catch {
       setPhoneError("Ошибка поиска. Попробуйте позже.");
@@ -693,26 +706,19 @@ export default function BookingWizardPage() {
       );
     }
 
-    // Phone form (no linked patients or user wants to search)
+    // Contact sharing form (secure — no manual phone input)
     return (
       <div className="space-y-4">
         <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
-              <Phone className="w-5 h-5 text-primary-600" />
+              <Shield className="w-5 h-5 text-primary-600" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">Введите номер телефона</p>
-              <p className="text-xs text-gray-500">Для поиска вашей карты пациента</p>
+              <p className="font-semibold text-gray-900 text-sm">Привязка к клинике</p>
+              <p className="text-xs text-gray-500">Поделитесь номером для безопасной привязки</p>
             </div>
           </div>
-          <input
-            type="tel"
-            value={phoneInput}
-            onChange={(e) => setPhoneInput(e.target.value)}
-            placeholder="+7 (___) ___-__-__"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
-          />
           {phoneError && (
             <p className="text-xs text-red-500 flex items-center gap-1">
               <AlertCircle className="w-3 h-3" /> {phoneError}
@@ -720,8 +726,8 @@ export default function BookingWizardPage() {
           )}
         </div>
         <button
-          onClick={handlePhoneLink}
-          disabled={phoneLinking || phoneInput.replace(/\D/g, "").length < 10}
+          onClick={handleShareContact}
+          disabled={phoneLinking}
           className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white py-3 rounded-xl font-semibold shadow-md shadow-primary-600/30 active:scale-[0.97] transition-all disabled:opacity-50"
         >
           {phoneLinking ? (
@@ -730,8 +736,7 @@ export default function BookingWizardPage() {
             </>
           ) : (
             <>
-              Найти пациента
-              <ChevronRight className="w-4 h-4" />
+              <Phone className="w-4 h-4" /> Поделиться номером
             </>
           )}
         </button>

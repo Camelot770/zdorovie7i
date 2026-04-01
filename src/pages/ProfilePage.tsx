@@ -12,7 +12,6 @@ import {
   Loader2,
   Unlink,
   User,
-  Search,
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
@@ -111,13 +110,23 @@ export default function ProfilePage() {
     return msg;
   }
 
-  async function handleLink() {
-    const phoneDigits = linkPhone.replace(/\D/g, "");
-    if (phoneDigits.length < 11) {
-      setError("Введите номер телефона полностью");
+  async function handleShareContact() {
+    if (!window.WebApp?.requestContact) {
+      setError("Функция недоступна. Откройте приложение через MAX.");
       return;
     }
 
+    window.WebApp.requestContact((sent, contact) => {
+      if (!sent || !contact?.phone_number) {
+        return;
+      }
+      const phone = contact.phone_number.replace(/\D/g, "");
+      setLinkPhone(phone);
+      doLink(phone);
+    });
+  }
+
+  async function doLink(phone: string) {
     setSubmitting(true);
     setError("");
 
@@ -127,10 +136,9 @@ export default function ProfilePage() {
         patientId?: string;
         fullName?: string;
         patients?: Patient[];
-      }>("/auth/link", { max_user_id: maxUserId, phone: linkPhone });
+      }>("/auth/link", { max_user_id: maxUserId, phone });
 
       if (result.status === "linked" && result.patientId) {
-        // Don't auto-accept — show confirmation so user can reject if wrong person
         setLinkedResult({ patientId: result.patientId, fullName: result.fullName || "" });
         setLinkStep("confirm");
       } else if (result.status === "multiple" && result.patients?.length) {
@@ -139,8 +147,7 @@ export default function ProfilePage() {
       }
     } catch (err) {
       if (err instanceof Error && err.message.includes("404")) {
-        // Patient not found → offer registration
-        setForm({ ...emptyForm, phone: linkPhone });
+        setForm({ ...emptyForm, phone });
         setLinkStep("register");
         setError("");
         return;
@@ -371,28 +378,17 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Step 1: Phone linking (primary flow) */}
+        {/* Step 1: Phone linking via contact sharing (secure) */}
         {!patientId && linkStep === "phone" && (
           <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-                <Phone className="w-4 h-4 text-primary-600" />
+                <Shield className="w-4 h-4 text-primary-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900 text-sm">Привязка к клинике</h3>
-                <p className="text-xs text-gray-500">Введите номер телефона из карты пациента</p>
+                <p className="text-xs text-gray-500">Поделитесь номером для безопасной привязки</p>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Телефон</label>
-              <input
-                type="tel"
-                value={linkPhone}
-                onChange={(e) => { setLinkPhone(e.target.value); setError(""); }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="+7 (999) 123-45-67"
-              />
             </div>
 
             {error && (
@@ -400,20 +396,20 @@ export default function ProfilePage() {
             )}
 
             <button
-              onClick={handleLink}
+              onClick={handleShareContact}
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 active:scale-[0.97] transition-all"
+              className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 active:scale-[0.97] transition-all"
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Search className="w-4 h-4" />
+                <Phone className="w-4 h-4" />
               )}
-              {submitting ? "Поиск..." : "Найти"}
+              {submitting ? "Поиск..." : "Поделиться номером"}
             </button>
 
             <p className="text-xs text-gray-400 text-center">
-              Если вы ранее были пациентом клиники, мы найдём вашу карту по телефону
+              Номер берётся из вашего профиля MAX — это безопасно
             </p>
 
             <button
@@ -421,7 +417,7 @@ export default function ProfilePage() {
               onClick={() => { setForm(emptyForm); setLinkStep("register"); setError(""); }}
               className="w-full text-xs text-primary-600 font-medium py-1"
             >
-              Зарегистрировать нового пациента →
+              Зарегистрировать нового пациента
             </button>
           </div>
         )}
