@@ -103,13 +103,15 @@ interface WebApp {
     },
     callback?: (buttonId: string) => void
   ): void;
-  requestContact(callback: (sent: boolean, contact?: WebAppContact) => void): void;
+  requestContact(): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
   enableClosingConfirmation(): void;
   disableClosingConfirmation(): void;
-  onEvent(eventType: string, callback: (...args: unknown[]) => void): void;
-  offEvent(eventType: string, callback: (...args: unknown[]) => void): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onEvent(eventType: string, callback: (...args: any[]) => void): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  offEvent(eventType: string, callback: (...args: any[]) => void): void;
   isVersionAtLeast(version: string): boolean;
 }
 
