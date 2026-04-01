@@ -53,7 +53,7 @@ export default function ProfilePage() {
 
   const [linkStep, setLinkStep] = useState<LinkStep>("phone");
   const [linkPhone, setLinkPhone] = useState("+7");
-  const [foundPatients, setFoundPatients] = useState<Patient[]>([]);
+  const [foundPatients] = useState<Patient[]>([]);
   const [linkedResult, setLinkedResult] = useState<{ patientId: string; fullName: string } | null>(null);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [form, setForm] = useState<RegisterForm>(emptyForm);
@@ -110,63 +110,7 @@ export default function ProfilePage() {
     return msg;
   }
 
-  function handleShareContact() {
-    if (!window.WebApp?.requestContact) {
-      setError("Откройте приложение через бот в MAX для привязки номера.");
-      return;
-    }
-    try {
-      // MAX WebApp: requestContact() takes no args, result comes via event
-      const handler = (data: { phone?: string }) => {
-        console.log("WebAppRequestPhone event:", data);
-        window.WebApp?.offEvent?.("WebAppRequestPhone", handler);
-        const phone = (data?.phone || "").replace(/\D/g, "");
-        if (!phone) {
-          setError("Не удалось получить номер телефона. Попробуйте ещё раз.");
-          return;
-        }
-        setLinkPhone(phone);
-        doLink(phone);
-      };
-      window.WebApp.onEvent?.("WebAppRequestPhone", handler);
-      window.WebApp.requestContact();
-    } catch (e) {
-      console.error("requestContact error:", e);
-      setError("Ошибка при запросе контакта. Попробуйте ещё раз.");
-    }
-  }
 
-  async function doLink(phone: string) {
-    setSubmitting(true);
-    setError("");
-
-    try {
-      const result = await apiPost<{
-        status: string;
-        patientId?: string;
-        fullName?: string;
-        patients?: Patient[];
-      }>("/auth/link", { max_user_id: maxUserId, phone });
-
-      if (result.status === "linked" && result.patientId) {
-        setLinkedResult({ patientId: result.patientId, fullName: result.fullName || "" });
-        setLinkStep("confirm");
-      } else if (result.status === "multiple" && result.patients?.length) {
-        setFoundPatients(result.patients);
-        setLinkStep("pick");
-      }
-    } catch (err) {
-      if (err instanceof Error && err.message.includes("404")) {
-        setForm({ ...emptyForm, phone });
-        setLinkStep("register");
-        setError("");
-        return;
-      }
-      setError(friendlyError(err, "Ошибка поиска пациента. Попробуйте позже."));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   function handleConfirmLink() {
     if (linkedResult) {
@@ -388,7 +332,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Step 1: Phone linking via contact sharing only */}
+        {/* Step 1: Prompt to share phone via bot */}
         {!patientId && linkStep === "phone" && (
           <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
             <div className="flex items-center gap-2 mb-1">
@@ -397,38 +341,17 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900 text-sm">Привязка к клинике</h3>
-                <p className="text-xs text-gray-500">Поделитесь номером для безопасной привязки</p>
               </div>
             </div>
 
-            {error && (
-              <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-            )}
-
-            <button
-              onClick={handleShareContact}
-              disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-primary-700 disabled:opacity-60 active:scale-[0.97] transition-all"
-            >
-              {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Phone className="w-4 h-4" />
-              )}
-              {submitting ? "Поиск..." : "Поделиться номером"}
-            </button>
-
-            <p className="text-xs text-gray-400 text-center">
-              Номер берётся из вашего профиля MAX — это безопасно
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Чтобы привязать аккаунт, вернитесь в чат с ботом и нажмите кнопку
+              <span className="font-semibold text-primary-600"> «📱 Поделиться номером»</span>.
             </p>
 
-            <button
-              type="button"
-              onClick={() => { setForm(emptyForm); setLinkStep("register"); setError(""); }}
-              className="w-full text-xs text-primary-600 font-medium py-1"
-            >
-              Зарегистрировать нового пациента
-            </button>
+            <p className="text-xs text-gray-400 text-center">
+              Это безопасно — номер берётся из вашего профиля MAX
+            </p>
           </div>
         )}
 

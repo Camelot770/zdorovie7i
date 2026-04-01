@@ -13,7 +13,6 @@ import {
   Loader2,
   AlertCircle,
   Clock,
-  Phone,
   Shield,
 } from "lucide-react";
 import { apiGet, apiGetFresh, apiPost } from "../api/client";
@@ -93,8 +92,6 @@ export default function BookingWizardPage() {
   const [linkedPatientsFetched, setLinkedPatientsFetched] = useState(false);
 
   // Phone linking state
-  const [phoneLinking, setPhoneLinking] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
   const [foundPatients, setFoundPatients] = useState<Patient[]>([]);
   const [showPhoneForm, setShowPhoneForm] = useState(false);
 
@@ -262,81 +259,6 @@ export default function BookingWizardPage() {
     }
   }
 
-  // ─── Phone linking via contact sharing only ───
-  function handleShareContact() {
-    if (!window.WebApp?.requestContact) {
-      setPhoneError("Откройте приложение через бот в MAX для привязки номера.");
-      return;
-    }
-    try {
-      // MAX WebApp: requestContact() takes no args, result comes via event
-      const handler = (data: { phone?: string }) => {
-        console.log("WebAppRequestPhone event:", data);
-        window.WebApp?.offEvent?.("WebAppRequestPhone", handler);
-        const phone = (data?.phone || "").replace(/\D/g, "");
-        if (!phone) {
-          setPhoneError("Не удалось получить номер телефона. Попробуйте ещё раз.");
-          return;
-        }
-        doPhoneLink(phone);
-      };
-      window.WebApp.onEvent?.("WebAppRequestPhone", handler);
-      window.WebApp.requestContact();
-    } catch (e) {
-      console.error("requestContact error:", e);
-      setPhoneError("Ошибка при запросе контакта. Попробуйте ещё раз.");
-    }
-  }
-
-  async function doPhoneLink(phone: string) {
-    if (!maxUserId) return;
-    setPhoneLinking(true);
-    setPhoneError("");
-    setFoundPatients([]);
-
-    try {
-      const result = await apiPost<{
-        status: string;
-        patientId?: string;
-        fullName?: string;
-        patients?: Patient[];
-      }>("/auth/link", { max_user_id: maxUserId, phone });
-
-      if (result.status === "linked" && result.patientId) {
-        setSelectedPatientId(result.patientId);
-        setSelectedPatientName(result.fullName || "Пациент");
-        setShowPhoneForm(false);
-      } else if (result.status === "multiple" && result.patients) {
-        setFoundPatients(result.patients);
-      } else {
-        setPhoneError("Пациент не найден. Зарегистрируйте нового пациента.");
-      }
-    } catch {
-      setPhoneError("Ошибка поиска. Попробуйте позже.");
-    } finally {
-      setPhoneLinking(false);
-    }
-  }
-
-  async function handleSelectFoundPatient(p: Patient) {
-    if (!maxUserId) return;
-    setPhoneLinking(true);
-    try {
-      const result = await apiPost<{
-        status: string;
-        patientId: string;
-        fullName: string;
-      }>(`/auth/link/${p.id}?max_user_id=${maxUserId}`);
-      setSelectedPatientId(result.patientId);
-      setSelectedPatientName(result.fullName);
-      setFoundPatients([]);
-      setShowPhoneForm(false);
-    } catch {
-      setPhoneError("Ошибка привязки.");
-    } finally {
-      setPhoneLinking(false);
-    }
-  }
 
   // ─── Submit booking ───
   async function handleConfirmBooking() {
@@ -683,8 +605,13 @@ export default function BookingWizardPage() {
           {foundPatients.map((p) => (
             <button
               key={p.id}
-              onClick={() => handleSelectFoundPatient(p)}
-              disabled={phoneLinking}
+              onClick={() => {
+                setSelectedPatientId(p.id);
+                setSelectedPatientName([p.lastName, p.firstName].filter(Boolean).join(" "));
+                setFoundPatients([]);
+                setShowPhoneForm(false);
+              }}
+              disabled={false}
               className="w-full bg-white rounded-xl p-3.5 shadow-card border border-gray-100 text-left flex items-center gap-3 active:scale-[0.98] transition-all hover:border-primary-300"
             >
               <Avatar
@@ -726,36 +653,16 @@ export default function BookingWizardPage() {
             </div>
             <div>
               <p className="font-semibold text-gray-900 text-sm">Привязка к клинике</p>
-              <p className="text-xs text-gray-500">Поделитесь номером для безопасной привязки</p>
             </div>
           </div>
-          {phoneError && (
-            <p className="text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {phoneError}
-            </p>
-          )}
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Чтобы записаться, сначала привяжите аккаунт. Вернитесь в чат с ботом и нажмите кнопку
+            <span className="font-semibold text-primary-600"> «📱 Поделиться номером»</span>.
+          </p>
+          <p className="text-xs text-gray-400 text-center">
+            Это безопасно — номер берётся из вашего профиля MAX
+          </p>
         </div>
-        <button
-          onClick={handleShareContact}
-          disabled={phoneLinking}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white py-3 rounded-xl font-semibold shadow-md shadow-primary-600/30 active:scale-[0.97] transition-all disabled:opacity-50"
-        >
-          {phoneLinking ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Поиск...
-            </>
-          ) : (
-            <>
-              <Phone className="w-4 h-4" /> Поделиться номером
-            </>
-          )}
-        </button>
-        <button
-          onClick={() => setShowRegisterForm(true)}
-          className="w-full text-sm text-primary-600 py-2 font-medium"
-        >
-          Создать нового пациента
-        </button>
         {selectedPatientId && (
           <button
             onClick={() => setShowPhoneForm(false)}
