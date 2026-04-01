@@ -110,16 +110,13 @@ export default function ProfilePage() {
     return msg;
   }
 
-  async function handleShareContact() {
+  function handleShareContact() {
     if (!window.WebApp?.requestContact) {
-      setError("Функция недоступна. Откройте приложение через MAX.");
+      setError("Откройте приложение через бот в MAX для привязки номера.");
       return;
     }
-
     window.WebApp.requestContact((sent, contact) => {
-      if (!sent || !contact?.phone_number) {
-        return;
-      }
+      if (!sent || !contact?.phone_number) return;
       const phone = contact.phone_number.replace(/\D/g, "");
       setLinkPhone(phone);
       doLink(phone);
@@ -378,7 +375,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Step 1: Phone linking via contact sharing (secure) */}
+        {/* Step 1: Phone linking via contact sharing only */}
         {!patientId && linkStep === "phone" && (
           <div className="bg-white rounded-2xl p-4 shadow-card border border-gray-100 space-y-3">
             <div className="flex items-center gap-2 mb-1">
