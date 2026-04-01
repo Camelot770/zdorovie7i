@@ -262,10 +262,10 @@ export default function BookingWizardPage() {
     }
   }
 
-  // ─── Phone linking via contact sharing (secure) ───
+  // ─── Phone linking via contact sharing only ───
   function handleShareContact() {
     if (!window.WebApp?.requestContact) {
-      setPhoneError("Функция недоступна. Откройте приложение через MAX.");
+      setPhoneError("Откройте приложение через бот в MAX для привязки номера.");
       return;
     }
     window.WebApp.requestContact((sent, contact) => {
