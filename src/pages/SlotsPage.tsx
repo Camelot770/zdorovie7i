@@ -58,12 +58,24 @@ export default function SlotsPage() {
     return apiGetFresh("/schedules", params);
   }, [doctorId, clinicId, specializationId]);
 
+  // Build set of УЗИ specialization IDs to filter out
+  const uziSpecIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const spec of specsData || []) {
+      if (/узи|узд|ультразв/i.test(spec.name)) {
+        ids.add(spec.id);
+      }
+    }
+    return ids;
+  }, [specsData]);
+
   const availableDates = useMemo(() => {
     const dates = new Set<string>();
     if (!schedules) return dates;
     const list = Array.isArray(schedules) ? schedules : [];
     for (const s of list) {
       if (s.isBusy) continue;
+      if (uziSpecIds.has(s.specializationId)) continue;
       for (const slot of s.appointmentSlots || []) {
         if (slot.isEmpty) {
           dates.add(slot.startAt.slice(0, 10));
@@ -71,7 +83,7 @@ export default function SlotsPage() {
       }
     }
     return dates;
-  }, [schedules]);
+  }, [schedules, uziSpecIds]);
 
   const daySlots = useMemo((): AppointmentSlot[] => {
     if (!selectedDate || !schedules) return [];
@@ -79,6 +91,7 @@ export default function SlotsPage() {
     const slots: AppointmentSlot[] = [];
     for (const s of list) {
       if (s.isBusy) continue;
+      if (uziSpecIds.has(s.specializationId)) continue;
       for (const slot of s.appointmentSlots || []) {
         if (slot.startAt.startsWith(selectedDate) && slot.isEmpty) {
           slots.push(slot);
@@ -87,7 +100,7 @@ export default function SlotsPage() {
     }
     slots.sort((a, b) => a.startAt.localeCompare(b.startAt));
     return slots;
-  }, [selectedDate, schedules]);
+  }, [selectedDate, schedules, uziSpecIds]);
 
   // Group day slots by clinic to show clinic name before confirmation
   const daySlotsByClinic = useMemo(() => {
@@ -96,6 +109,7 @@ export default function SlotsPage() {
     const groups: Record<string, { clinicId: string; clinicName: string; slots: AppointmentSlot[] }> = {};
     for (const s of list) {
       if (s.isBusy) continue;
+      if (uziSpecIds.has(s.specializationId)) continue;
       for (const slot of s.appointmentSlots || []) {
         if (slot.startAt.startsWith(selectedDate) && slot.isEmpty) {
           if (!groups[s.clinicId]) {
@@ -114,7 +128,7 @@ export default function SlotsPage() {
       ...g,
       slots: g.slots.sort((a, b) => a.startAt.localeCompare(b.startAt)),
     }));
-  }, [selectedDate, schedules, clinicsData]);
+  }, [selectedDate, schedules, clinicsData, uziSpecIds]);
 
   function handleSlotSelect(slot: AppointmentSlot) {
     // Find the schedule that contains this slot (single pass)
