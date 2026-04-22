@@ -687,9 +687,11 @@ export default function BookingWizardPage() {
       );
     }
 
-    // Filter specializations by patient age
+    // Filter specializations by patient age and exclude УЗИ
     const patientAge = bookingStore.isChild ? 10 : 30;
     const specs = (specializations || []).filter((s) => {
+      // Exclude УЗИ specializations
+      if (/узи|узд|ультразв/i.test(s.name)) return false;
       let from = s.ageFrom ?? 0;
       let to = s.ageTo ?? 999;
       // Name-based fallback: "Детский" in name → child-only (0-17)

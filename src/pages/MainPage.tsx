@@ -84,10 +84,12 @@ export default function MainPage() {
   const doctors = mainData?.doctors || [];
   const services = mainData?.services || [];
 
-  // Filter specializations by patient age (child <18, adult >=18)
+  // Filter specializations by patient age (child <18, adult >=18) and exclude УЗИ
   const specializations = useMemo(() => {
     const patientAge = isChild ? 10 : 30; // representative age for filtering
     return allSpecializations.filter((s) => {
+      // Exclude УЗИ specializations
+      if (/узи|узд|ультразв/i.test(s.name)) return false;
       let from = s.ageFrom ?? 0;
       let to = s.ageTo ?? 999;
       // Name-based fallback: if API didn't set age range but name says "Детский", treat as 0-17
