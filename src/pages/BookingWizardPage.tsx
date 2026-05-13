@@ -290,6 +290,7 @@ export default function BookingWizardPage() {
         specializationId: resolvedSpecId,
         patientId: selectedPatientId,
         serviceIds: selectedServiceIds,
+        source: "max_webapp",
       });
       // Sync to booking store for SuccessPage
       bookingStore.setDoctorId(selectedDoctorId, selectedDoctorName);
