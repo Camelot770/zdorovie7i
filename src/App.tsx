@@ -10,6 +10,7 @@ import MyRecordsPage from "./pages/MyRecordsPage";
 import CancelPage from "./pages/CancelPage";
 import ProfilePage from "./pages/ProfilePage";
 import BookingWizardPage from "./pages/BookingWizardPage";
+import PatientSelectPage from "./pages/PatientSelectPage";
 
 export default function App() {
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/booking" element={<BookingWizardPage />} />
           <Route path="/doctors" element={<DoctorsPage />} />
           <Route path="/slots/:doctorId" element={<SlotsPage />} />
+          <Route path="/select-patient" element={<PatientSelectPage />} />
           <Route path="/confirm" element={<ConfirmPage />} />
           <Route path="/success" element={<SuccessPage />} />
           <Route path="/records" element={<MyRecordsPage />} />
