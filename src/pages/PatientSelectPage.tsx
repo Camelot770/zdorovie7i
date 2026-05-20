@@ -62,7 +62,7 @@ export default function PatientSelectPage() {
       .then((pts) => {
         const list = pts || [];
         setPatients(list);
-        const specIsChildLocal = /детск/i.test(specializationName);
+        const specIsChildLocal = /детск|педиатр/i.test(specializationName);
         const isEligible = (p: LinkedPatient): boolean => {
           const a = calcAge(p.birthDate || "");
           if (a === null) return true;
@@ -102,7 +102,7 @@ export default function PatientSelectPage() {
   function isPatientEligible(p: LinkedPatient): boolean {
     const age = calcAge(p.birthDate || "");
     if (age === null) return true;
-    const specIsChild = /детск/i.test(specializationName);
+    const specIsChild = /детск|педиатр/i.test(specializationName);
     if (specIsChild && age >= 18) return false;
     if (!specIsChild && age < 18 && !isChild) return false;
     return true;
