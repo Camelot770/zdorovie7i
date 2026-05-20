@@ -198,29 +198,28 @@ export default function DoctorsPage() {
 
   let list = Array.isArray(doctors) ? doctors : [];
 
-  // STRICT mode: doctor must have at least one spec matching the patient
-  // age by NAME. Ignores 1С ageFrom/ageTo entirely.
+  // STRICT mode: doctor must have at least one (clinic, spec) pair where:
+  //   - clinic matches the selected clinicId (if any)
+  //   - spec name matches the patient-age mode by name
+  //   - spec matches the pre-selected specializationId (if any)
   {
     const matchingSpecIds = new Set(
       (specsData || [])
         .filter((s) => /детск|педиатр/i.test(s.name) === isChild)
         .map((s) => s.id),
     );
-    if (specializationId) {
-      if (!matchingSpecIds.has(specializationId)) {
-        list = [];
-      } else {
-        list = list.filter((d) =>
-          (d.clinics || []).some((cl) =>
-            (cl.specializations || []).some((s) => s.specializationId === specializationId),
-          ),
-        );
-      }
+
+    if (specializationId && !matchingSpecIds.has(specializationId)) {
+      list = [];
     } else {
       list = list.filter((d) =>
-        (d.clinics || []).some((cl) =>
-          (cl.specializations || []).some((s) => matchingSpecIds.has(s.specializationId)),
-        ),
+        (d.clinics || []).some((cl) => {
+          if (clinicId && cl.clinicId !== clinicId) return false;
+          return (cl.specializations || []).some((s) => {
+            if (specializationId) return s.specializationId === specializationId;
+            return matchingSpecIds.has(s.specializationId);
+          });
+        }),
       );
     }
   }
