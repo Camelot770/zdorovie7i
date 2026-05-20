@@ -121,7 +121,11 @@ export default function DoctorsPage() {
     [servicesData]
   );
 
-  // Fetch schedules for nearest available date (limit to first 20 doctors)
+  // Fetch schedules:
+  //   - With clinicId → fetch all schedules at (clinic, spec) — used as the
+  //     authoritative "doctor actually practises here" filter.
+  //   - Otherwise → fetch for the first 20 doctors (just for the nearest-
+  //     date hint; no strict filtering).
   const scheduleDocIds = useMemo(() => {
     const docs = Array.isArray(doctors) ? doctors : [];
     return docs.slice(0, 20).map((d) => d.id);
@@ -130,17 +134,34 @@ export default function DoctorsPage() {
   const scheduleKey = scheduleDocIds.join(",");
   const { data: schedules } = useApi<Schedule[]>(
     () => {
-      if (scheduleDocIds.length === 0) return Promise.resolve([]);
       const params: Record<string, string> = {
-        doctorIds: scheduleDocIds.join(","),
         include: "appointmentSlots",
       };
-      if (clinicId) params.clinicIds = clinicId;
-      if (specializationId) params.specializationIds = specializationId;
+      if (clinicId) {
+        params.clinicIds = clinicId;
+        if (specializationId) params.specializationIds = specializationId;
+      } else {
+        if (scheduleDocIds.length === 0) return Promise.resolve([]);
+        params.doctorIds = scheduleDocIds.join(",");
+        if (specializationId) params.specializationIds = specializationId;
+      }
       return apiGetFresh("/schedules", params);
     },
     [scheduleKey, clinicId, specializationId]
   );
+
+  // Doctors that actually have at least one schedule entry at the selected
+  // (clinic, spec). 1С /doctors returns "associated" doctors even when they
+  // don't actively practise at the clinic — schedules are the source of
+  // truth for "really sees patients here".
+  const practisingDoctorIds = useMemo(() => {
+    const ids = new Set<string>();
+    const list = Array.isArray(schedules) ? schedules : [];
+    for (const sch of list) {
+      if (sch.doctorId) ids.add(sch.doctorId);
+    }
+    return ids;
+  }, [schedules]);
 
   /** Map doctorId → formatted nearest date string */
   const nearestDateMap = useMemo(() => {
@@ -222,6 +243,13 @@ export default function DoctorsPage() {
         }),
       );
     }
+  }
+
+  // Strict filter by schedule presence when a clinic is selected — removes
+  // doctors whom 1С claims work at the clinic but who actually have no
+  // schedule there (booking would fail anyway).
+  if (clinicId && Array.isArray(schedules) && practisingDoctorIds.size > 0) {
+    list = list.filter((d) => practisingDoctorIds.has(d.id));
   }
 
   // Filter to favorites if requested
