@@ -219,10 +219,11 @@ export default function DoctorsPage() {
 
   let list = Array.isArray(doctors) ? doctors : [];
 
-  // STRICT mode: doctor must have at least one (clinic, spec) pair where:
-  //   - clinic matches the selected clinicId (if any)
-  //   - spec name matches the patient-age mode by name
-  //   - spec matches the pre-selected specializationId (if any)
+  // Filtering strategy (same as VK version):
+  // 1. clinicId + specializationId both in URL → trust /doctors API.
+  // 2. Otherwise apply local age + clinic filter.
+  // 3. Bonus schedule-based filter only kicks in when there's overlap
+  //    between schedules and doctor list (avoids over-filtering).
   {
     const matchingSpecIds = new Set(
       (specsData || [])
@@ -232,7 +233,7 @@ export default function DoctorsPage() {
 
     if (specializationId && !matchingSpecIds.has(specializationId)) {
       list = [];
-    } else {
+    } else if (!(clinicId && specializationId)) {
       list = list.filter((d) =>
         (d.clinics || []).some((cl) => {
           if (clinicId && cl.clinicId !== clinicId) return false;
@@ -245,10 +246,12 @@ export default function DoctorsPage() {
     }
   }
 
-  // Strict filter by schedule presence when a clinic is selected — removes
-  // doctors whom 1С claims work at the clinic but who actually have no
-  // schedule there (booking would fail anyway).
-  if (clinicId && Array.isArray(schedules) && practisingDoctorIds.size > 0) {
+  if (
+    clinicId &&
+    Array.isArray(schedules) &&
+    practisingDoctorIds.size > 0 &&
+    list.some((d) => practisingDoctorIds.has(d.id))
+  ) {
     list = list.filter((d) => practisingDoctorIds.has(d.id));
   }
 
