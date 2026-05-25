@@ -92,17 +92,16 @@ export default function MainPage() {
     const patientAge = isChild ? 10 : 30;
 
     const fitsAge = (apiFrom: number | null | undefined, apiTo: number | null | undefined, name: string): boolean => {
-      let from: number;
-      let to: number;
+      const hasChildName = /детск|педиатр/i.test(name);
       if (apiFrom == null && apiTo == null) {
-        if (/детск|педиатр/i.test(name)) {
-          from = 0; to = 17;
-        } else {
-          from = 18; to = 120;
-        }
-      } else {
-        from = apiFrom ?? 0;
-        to = apiTo ?? 120;
+        return hasChildName ? patientAge <= 17 : patientAge >= 18;
+      }
+      const from = apiFrom ?? 0;
+      const to = apiTo ?? 120;
+      // Wide 1С range that covers both groups + generic name → treat
+      // as adult-only (handles "Акушер-гинеколог" with 1С 0..120).
+      if (from <= 17 && to >= 18 && !hasChildName) {
+        return patientAge >= 18;
       }
       return patientAge >= from && patientAge <= to;
     };
