@@ -15,9 +15,10 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useAuthStore } from "../store/auth";
 import { useFavoritesStore } from "../store/favorites";
 import { useBookingStore } from "../store/booking";
-import { apiPost } from "../api/client";
+import { apiPost, clearCache } from "../api/client";
 import PageTransition from "../components/ui/PageTransition";
 import Avatar from "../components/ui/Avatar";
 import EmptyState from "../components/ui/EmptyState";
@@ -244,8 +245,13 @@ export default function ProfilePage() {
   ];
 
   function handleLogout() {
+    // Wipe everything BEFORE reload — otherwise stale data sticks if the
+    // reload is slow or fails and the next user opens the app on the same device.
     localStorage.removeItem("max_user_id");
     localStorage.removeItem("fav_doctors");
+    useBookingStore.getState().reset();
+    useAuthStore.getState().reset();
+    clearCache(); // wipe in-memory GET cache (no cross-user leak via cache)
     try { window.WebApp?.close?.(); } catch { /* noop */ }
     navigate("/");
     window.location.reload();
