@@ -11,7 +11,12 @@ import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import { groupServicesBySpecialization, collectServiceIds } from "../utils/prices";
-import { buildSpecAgeFlags, rangeOverlapsMode, specNameIsUltrasound } from "../utils/ageFilter";
+import {
+  buildSpecAgeFlags,
+  specShowsInMode,
+  doctorShowsInMode,
+  specNameIsUltrasound,
+} from "../utils/ageFilter";
 import type { Clinic, Specialization, Doctor, Service } from "../types";
 
 interface MainPageData {
@@ -89,41 +94,23 @@ export default function MainPage() {
   // service name contains "детск/педиатр". Ignore ageFrom/ageTo since 1С
   // routinely sets them to 0..120 for everyone.
   const specializations = useMemo(() => {
-    const { specHasKid, specHasAdult } = buildSpecAgeFlags(doctors, clinicId || undefined);
-
+    const flags = buildSpecAgeFlags(doctors, clinicId || undefined);
     return allSpecializations.filter((s) => {
       if (specNameIsUltrasound(s.name)) return false;
-      // 1. Global Specialization age range — strict kid spec hidden in adult mode, etc.
-      if (!rangeOverlapsMode(s.ageFrom, s.ageTo, isChild)) return false;
       if (!doctors || doctors.length === 0) return true;
-      // 2. Per-spec aggregation across (doctor, clinic, spec, service) rows.
-      return isChild ? !!specHasKid.get(s.id) : !!specHasAdult.get(s.id);
+      return specShowsInMode(s, flags, isChild);
     });
   }, [allSpecializations, isChild, clinicId, doctors]);
 
   const filteredClinics = useMemo(() => {
-    // A clinic is shown if it has at least one (doctor, spec) or
-    // (doctor, spec, service) row whose age range overlaps the current mode.
+    // A clinic is shown if at least one of its doctors shows in the current
+    // mode at that clinic (using strict-signal rules from ageFilter).
     const clinicIdsWithDocs = new Set<string>();
     for (const doc of doctors) {
       for (const cl of doc.clinics || []) {
         if (clinicIdsWithDocs.has(cl.clinicId)) continue;
-        for (const sp of cl.specializations || []) {
-          if (rangeOverlapsMode(sp.ageFrom, sp.ageTo, isChild)) {
-            clinicIdsWithDocs.add(cl.clinicId);
-            break;
-          }
-          let svcMatch = false;
-          for (const svc of sp.services || []) {
-            if (rangeOverlapsMode(svc.ageFrom, svc.ageTo, isChild)) {
-              svcMatch = true;
-              break;
-            }
-          }
-          if (svcMatch) {
-            clinicIdsWithDocs.add(cl.clinicId);
-            break;
-          }
+        if (doctorShowsInMode(doc, cl.clinicId, undefined, isChild)) {
+          clinicIdsWithDocs.add(cl.clinicId);
         }
       }
     }
