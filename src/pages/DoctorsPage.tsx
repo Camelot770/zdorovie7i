@@ -6,7 +6,7 @@ import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { useFavoritesStore } from "../store/favorites";
 import { buildConsultPriceMap, getMinPrice } from "../utils/prices";
-import { buildDoctorAgeFlags, specNameIsPediatric } from "../utils/ageFilter";
+import { buildDoctorAgeFlags } from "../utils/ageFilter";
 import DoctorCard from "../components/DoctorCard";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonList from "../components/ui/SkeletonList";
@@ -226,16 +226,8 @@ export default function DoctorsPage() {
   // 3. Bonus schedule-based filter only kicks in when there's overlap
   //    between schedules and doctor list (avoids over-filtering).
   {
-    // Doctor-level aggregate flags — see utils/ageFilter.ts.
-    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(
-      list,
-      servicesData || [],
-      specsData || []
-    );
-    const urlSpecIsPediatric = !!(
-      specializationId &&
-      (specsData || []).find((sp) => sp.id === specializationId && specNameIsPediatric(sp.name))
-    );
+    // Per-doctor kid/adult flags based purely on 1С age ranges — no names.
+    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(list);
 
     const doctorMatchesMode = (d: typeof list[number]): boolean => {
       // Must actually practise at the selected (clinic, spec) — URL filters.
@@ -250,9 +242,6 @@ export default function DoctorsPage() {
         if (practises) break;
       }
       if (!practises) return false;
-
-      // If URL pins an explicit pediatric spec, the spec name decides.
-      if (urlSpecIsPediatric) return isChild;
       return isChild ? !!docHasKid.get(d.id) : !!docHasAdult.get(d.id);
     };
 

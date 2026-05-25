@@ -11,7 +11,7 @@ import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import { groupServicesBySpecialization, collectServiceIds } from "../utils/prices";
-import { buildDoctorAgeFlags, specNameIsPediatric, specNameIsUltrasound } from "../utils/ageFilter";
+import { buildDoctorAgeFlags, specNameIsUltrasound } from "../utils/ageFilter";
 import type { Clinic, Specialization, Doctor, Service } from "../types";
 
 interface MainPageData {
@@ -89,18 +89,14 @@ export default function MainPage() {
   // service name contains "детск/педиатр". Ignore ageFrom/ageTo since 1С
   // routinely sets them to 0..120 for everyone.
   const specializations = useMemo(() => {
-    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(doctors, services, allSpecializations);
+    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(doctors);
 
     return allSpecializations.filter((s) => {
       if (specNameIsUltrasound(s.name)) return false;
-
-      // Explicit pediatric spec by NAME → kid-only (no need to scan doctors).
-      if (specNameIsPediatric(s.name)) return isChild;
-
       if (!doctors || doctors.length === 0) return true;
 
-      // Neutral spec — show if at least one practising doctor (at the
-      // optional selected clinic) has the matching aggregate profile.
+      // Show if at least one practising doctor (at the optional selected
+      // clinic) has age ranges matching the current mode.
       for (const doc of doctors) {
         let practises = false;
         for (const cl of doc.clinics || []) {
@@ -119,10 +115,10 @@ export default function MainPage() {
       }
       return false;
     });
-  }, [allSpecializations, isChild, clinicId, doctors, services]);
+  }, [allSpecializations, isChild, clinicId, doctors]);
 
   const filteredClinics = useMemo(() => {
-    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(doctors, services, allSpecializations);
+    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(doctors);
     const clinicIdsWithDocs = new Set<string>();
     for (const doc of doctors) {
       const matches = isChild ? docHasKid.get(doc.id) : docHasAdult.get(doc.id);
@@ -132,7 +128,7 @@ export default function MainPage() {
       }
     }
     return clinics.filter((c) => clinicIdsWithDocs.has(c.id));
-  }, [clinics, allSpecializations, doctors, services, isChild]);
+  }, [clinics, doctors, isChild]);
 
   // Reset clinic selection if current clinic is not in filtered list
   useEffect(() => {
