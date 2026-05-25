@@ -11,7 +11,7 @@ import DoctorSearch from "../components/DoctorSearch";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import { groupServicesBySpecialization, collectServiceIds } from "../utils/prices";
-import { buildDoctorAgeFlags, specNameIsUltrasound } from "../utils/ageFilter";
+import { buildSpecAgeFlags, rangeOverlapsMode, specNameIsUltrasound } from "../utils/ageFilter";
 import type { Clinic, Specialization, Doctor, Service } from "../types";
 
 interface MainPageData {
@@ -89,42 +89,42 @@ export default function MainPage() {
   // service name contains "детск/педиатр". Ignore ageFrom/ageTo since 1С
   // routinely sets them to 0..120 for everyone.
   const specializations = useMemo(() => {
-    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(doctors);
+    const { specHasKid, specHasAdult } = buildSpecAgeFlags(doctors, clinicId || undefined);
 
     return allSpecializations.filter((s) => {
       if (specNameIsUltrasound(s.name)) return false;
+      // 1. Global Specialization age range — strict kid spec hidden in adult mode, etc.
+      if (!rangeOverlapsMode(s.ageFrom, s.ageTo, isChild)) return false;
       if (!doctors || doctors.length === 0) return true;
-
-      // Show if at least one practising doctor (at the optional selected
-      // clinic) has age ranges matching the current mode.
-      for (const doc of doctors) {
-        let practises = false;
-        for (const cl of doc.clinics || []) {
-          if (clinicId && cl.clinicId !== clinicId) continue;
-          for (const sp of cl.specializations || []) {
-            if (sp.specializationId === s.id) {
-              practises = true;
-              break;
-            }
-          }
-          if (practises) break;
-        }
-        if (!practises) continue;
-        if (isChild && docHasKid.get(doc.id)) return true;
-        if (!isChild && docHasAdult.get(doc.id)) return true;
-      }
-      return false;
+      // 2. Per-spec aggregation across (doctor, clinic, spec, service) rows.
+      return isChild ? !!specHasKid.get(s.id) : !!specHasAdult.get(s.id);
     });
   }, [allSpecializations, isChild, clinicId, doctors]);
 
   const filteredClinics = useMemo(() => {
-    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(doctors);
+    // A clinic is shown if it has at least one (doctor, spec) or
+    // (doctor, spec, service) row whose age range overlaps the current mode.
     const clinicIdsWithDocs = new Set<string>();
     for (const doc of doctors) {
-      const matches = isChild ? docHasKid.get(doc.id) : docHasAdult.get(doc.id);
-      if (!matches) continue;
       for (const cl of doc.clinics || []) {
-        clinicIdsWithDocs.add(cl.clinicId);
+        if (clinicIdsWithDocs.has(cl.clinicId)) continue;
+        for (const sp of cl.specializations || []) {
+          if (rangeOverlapsMode(sp.ageFrom, sp.ageTo, isChild)) {
+            clinicIdsWithDocs.add(cl.clinicId);
+            break;
+          }
+          let svcMatch = false;
+          for (const svc of sp.services || []) {
+            if (rangeOverlapsMode(svc.ageFrom, svc.ageTo, isChild)) {
+              svcMatch = true;
+              break;
+            }
+          }
+          if (svcMatch) {
+            clinicIdsWithDocs.add(cl.clinicId);
+            break;
+          }
+        }
       }
     }
     return clinics.filter((c) => clinicIdsWithDocs.has(c.id));
