@@ -225,39 +225,29 @@ export default function DoctorsPage() {
   // 3. Bonus schedule-based filter only kicks in when there's overlap
   //    between schedules and doctor list (avoids over-filtering).
   {
-    const patientAge = isChild ? 10 : 30;
-    const fitsAge = (apiFrom: number | null | undefined, apiTo: number | null | undefined, name: string): boolean => {
-      const hasChildName = /детск|педиатр/i.test(name);
-      if (apiFrom == null && apiTo == null) {
-        return hasChildName ? patientAge <= 17 : patientAge >= 18;
+    // Filter by SERVICE NAMES — clinic's own kid/adult routing rule.
+    const serviceIsKid = new Map<string, boolean>();
+    for (const svc of servicesData || []) {
+      if (!svc.name) continue;
+      serviceIsKid.set(svc.id, /детск|педиатр/i.test(svc.name));
+    }
+
+    const doctorMatchesMode = (d: typeof list[number]): boolean => {
+      for (const cl of d.clinics || []) {
+        if (clinicId && cl.clinicId !== clinicId) continue;
+        for (const sp of cl.specializations || []) {
+          if (specializationId && sp.specializationId !== specializationId) continue;
+          for (const svc of sp.services || []) {
+            const kid = serviceIsKid.get(svc.serviceId);
+            if (kid === undefined) continue;
+            if (kid === isChild) return true;
+          }
+        }
       }
-      const from = apiFrom ?? 0;
-      const to = apiTo ?? 120;
-      if (from <= 17 && to >= 18 && !hasChildName) {
-        return patientAge >= 18;
-      }
-      return patientAge >= from && patientAge <= to;
+      return false;
     };
 
-    const matchingSpecIds = new Set(
-      (specsData || [])
-        .filter((s) => fitsAge(s.ageFrom, s.ageTo, s.name))
-        .map((s) => s.id),
-    );
-
-    if (specializationId && !matchingSpecIds.has(specializationId)) {
-      list = [];
-    } else if (!(clinicId && specializationId)) {
-      list = list.filter((d) =>
-        (d.clinics || []).some((cl) => {
-          if (clinicId && cl.clinicId !== clinicId) return false;
-          return (cl.specializations || []).some((s) => {
-            if (specializationId) return s.specializationId === specializationId;
-            return matchingSpecIds.has(s.specializationId);
-          });
-        }),
-      );
-    }
+    list = list.filter(doctorMatchesMode);
   }
 
   if (

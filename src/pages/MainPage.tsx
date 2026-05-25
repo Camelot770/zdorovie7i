@@ -84,36 +84,17 @@ export default function MainPage() {
   const doctors = mainData?.doctors || [];
   const services = mainData?.services || [];
 
-  // Two-pass spec filter:
-  //   1. Spec-level age check (hybrid: 1С ageFrom/ageTo, else name fallback).
-  //   2. AT LEAST ONE doctor at the (selected) clinic must offer this spec
-  //      AND that doctor's per-spec ageFrom/ageTo must accept patient age.
+  // Per the clinic's own convention: a spec/doctor is "for kids" if a
+  // service name contains "детск/педиатр". Ignore ageFrom/ageTo since 1С
+  // routinely sets them to 0..120 for everyone.
   const specializations = useMemo(() => {
-    const patientAge = isChild ? 10 : 30;
-
-    const fitsAge = (apiFrom: number | null | undefined, apiTo: number | null | undefined, name: string): boolean => {
-      const hasChildName = /детск|педиатр/i.test(name);
-      if (apiFrom == null && apiTo == null) {
-        return hasChildName ? patientAge <= 17 : patientAge >= 18;
-      }
-      const from = apiFrom ?? 0;
-      const to = apiTo ?? 120;
-      // Wide 1С range that covers both groups + generic name → treat
-      // as adult-only (handles "Акушер-гинеколог" with 1С 0..120).
-      if (from <= 17 && to >= 18 && !hasChildName) {
-        return patientAge >= 18;
-      }
-      return patientAge >= from && patientAge <= to;
-    };
-
-    const specNameById = new Map<string, string>();
-    for (const s of allSpecializations) specNameById.set(s.id, s.name);
-
+    const serviceIsKid = new Map<string, boolean>();
+    for (const svc of services) {
+      if (!svc.name) continue;
+      serviceIsKid.set(svc.id, /детск|педиатр/i.test(svc.name));
+    }
     return allSpecializations.filter((s) => {
       if (/узи|узд|ультразв/i.test(s.name)) return false;
-      if (!fitsAge(s.ageFrom, s.ageTo, s.name)) return false;
-
-      // Wait for doctors to load before hiding (avoid empty list flash)
       if (!doctors || doctors.length === 0) return true;
 
       for (const doc of doctors) {
@@ -121,37 +102,40 @@ export default function MainPage() {
           if (clinicId && cl.clinicId !== clinicId) continue;
           for (const sp of cl.specializations || []) {
             if (sp.specializationId !== s.id) continue;
-            const docSpecName = specNameById.get(sp.specializationId) || s.name;
-            if (fitsAge(sp.ageFrom, sp.ageTo, docSpecName)) {
-              return true;
+            for (const svc of sp.services || []) {
+              const kid = serviceIsKid.get(svc.serviceId);
+              if (kid === undefined) continue;
+              if (kid === isChild) return true;
             }
           }
         }
       }
       return false;
     });
-  }, [allSpecializations, isChild, clinicId, doctors]);
+  }, [allSpecializations, isChild, clinicId, doctors, services]);
 
-  // Filter clinics: only those that have at least one doctor practising a
-  // specialization matching the patient age (by name only).
   const filteredClinics = useMemo(() => {
-    const matchingSpecIds = new Set(
-      allSpecializations
-        .filter((s) => /детск|педиатр/i.test(s.name) === isChild)
-        .map((s) => s.id),
-    );
+    const serviceIsKid = new Map<string, boolean>();
+    for (const svc of services) {
+      if (!svc.name) continue;
+      serviceIsKid.set(svc.id, /детск|педиатр/i.test(svc.name));
+    }
     const clinicIdsWithDocs = new Set<string>();
     for (const doc of doctors) {
       for (const cl of doc.clinics || []) {
         for (const sp of cl.specializations || []) {
-          if (matchingSpecIds.has(sp.specializationId)) {
-            clinicIdsWithDocs.add(cl.clinicId);
+          for (const svc of sp.services || []) {
+            const kid = serviceIsKid.get(svc.serviceId);
+            if (kid === undefined) continue;
+            if (kid === isChild) {
+              clinicIdsWithDocs.add(cl.clinicId);
+            }
           }
         }
       }
     }
     return clinics.filter((c) => clinicIdsWithDocs.has(c.id));
-  }, [clinics, doctors, isChild, allSpecializations]);
+  }, [clinics, doctors, services, isChild]);
 
   // Reset clinic selection if current clinic is not in filtered list
   useEffect(() => {
