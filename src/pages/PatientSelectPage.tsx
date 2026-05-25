@@ -17,6 +17,7 @@ import { useBookingStore } from "../store/booking";
 import { useAuth } from "../hooks/useAuth";
 import PageTransition from "../components/ui/PageTransition";
 import { calcAge, ageLabel } from "../utils/age";
+import { specNameIsPediatric, specNameIsAdultOnly } from "../utils/ageFilter";
 import type { Doctor, LinkedPatient, Specialization } from "../types";
 
 /**
@@ -96,12 +97,16 @@ export default function PatientSelectPage() {
       .then((pts) => {
         const list = pts || [];
         setPatients(list);
-        const specIsChildLocal = /детск|педиатр/i.test(specializationName);
+        // Eligibility: toggle + spec name. See isPatientEligible() below.
         const isEligible = (p: LinkedPatient): boolean => {
           const a = calcAge(p.birthDate || "");
           if (a === null) return true;
-          if (specIsChildLocal && a >= 18) return false;
-          if (!specIsChildLocal && a < 18 && !isChild) return false;
+          if (isChild && a >= 18) return false;
+          if (!isChild && a < 18) return false;
+          if (specializationName) {
+            if (specNameIsPediatric(specializationName) && a >= 18) return false;
+            if (specNameIsAdultOnly(specializationName) && a < 18) return false;
+          }
           return true;
         };
         setSelectedId((current) => {
@@ -132,13 +137,19 @@ export default function PatientSelectPage() {
     }
   }, [appointmentAt, navigate]);
 
-  /** Determine if a patient's age matches the chosen specialization. */
+  /** Determine if a patient's age matches both the toggle AND the spec/doctor. */
   function isPatientEligible(p: LinkedPatient): boolean {
     const age = calcAge(p.birthDate || "");
-    if (age === null) return true;
-    const specIsChild = /детск|педиатр/i.test(specializationName);
-    if (specIsChild && age >= 18) return false;
-    if (!specIsChild && age < 18 && !isChild) return false;
+    if (age === null) return true; // unknown age — let user decide
+    // 1. Toggle-based check (kid/adult radio at booking start).
+    if (isChild && age >= 18) return false;
+    if (!isChild && age < 18) return false;
+    // 2. Spec-name-based check — defends against the case where the user
+    //    landed on a kid/adult-named spec but the toggle disagrees.
+    if (specializationName) {
+      if (specNameIsPediatric(specializationName) && age >= 18) return false;
+      if (specNameIsAdultOnly(specializationName) && age < 18) return false;
+    }
     return true;
   }
 
