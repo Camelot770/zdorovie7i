@@ -6,6 +6,7 @@ import { useApi } from "../hooks/useApi";
 import { useBookingStore } from "../store/booking";
 import { useFavoritesStore } from "../store/favorites";
 import { buildConsultPriceMap, getMinPrice } from "../utils/prices";
+import { buildDoctorAgeFlags, specNameIsPediatric } from "../utils/ageFilter";
 import DoctorCard from "../components/DoctorCard";
 import PageTransition from "../components/ui/PageTransition";
 import SkeletonList from "../components/ui/SkeletonList";
@@ -225,26 +226,34 @@ export default function DoctorsPage() {
   // 3. Bonus schedule-based filter only kicks in when there's overlap
   //    between schedules and doctor list (avoids over-filtering).
   {
-    // Filter by SERVICE NAMES — clinic's own kid/adult routing rule.
-    const serviceIsKid = new Map<string, boolean>();
-    for (const svc of servicesData || []) {
-      if (!svc.name) continue;
-      serviceIsKid.set(svc.id, /детск|педиатр/i.test(svc.name));
-    }
+    // Doctor-level aggregate flags — see utils/ageFilter.ts.
+    const { docHasKid, docHasAdult } = buildDoctorAgeFlags(
+      list,
+      servicesData || [],
+      specsData || []
+    );
+    const urlSpecIsPediatric = !!(
+      specializationId &&
+      (specsData || []).find((sp) => sp.id === specializationId && specNameIsPediatric(sp.name))
+    );
 
     const doctorMatchesMode = (d: typeof list[number]): boolean => {
+      // Must actually practise at the selected (clinic, spec) — URL filters.
+      let practises = false;
       for (const cl of d.clinics || []) {
         if (clinicId && cl.clinicId !== clinicId) continue;
         for (const sp of cl.specializations || []) {
           if (specializationId && sp.specializationId !== specializationId) continue;
-          for (const svc of sp.services || []) {
-            const kid = serviceIsKid.get(svc.serviceId);
-            if (kid === undefined) continue;
-            if (kid === isChild) return true;
-          }
+          practises = true;
+          break;
         }
+        if (practises) break;
       }
-      return false;
+      if (!practises) return false;
+
+      // If URL pins an explicit pediatric spec, the spec name decides.
+      if (urlSpecIsPediatric) return isChild;
+      return isChild ? !!docHasKid.get(d.id) : !!docHasAdult.get(d.id);
     };
 
     list = list.filter(doctorMatchesMode);
