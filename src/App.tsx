@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import MainPage from "./pages/MainPage";
@@ -11,8 +11,28 @@ import CancelPage from "./pages/CancelPage";
 import ProfilePage from "./pages/ProfilePage";
 import BookingWizardPage from "./pages/BookingWizardPage";
 import PatientSelectPage from "./pages/PatientSelectPage";
+import { useAuthStore } from "./store/auth";
+import { useBookingStore } from "./store/booking";
+import { clearCache } from "./api/client";
 
 export default function App() {
+  // Reset booking + cache whenever the authenticated user changes (login,
+  // logout, account switch). Otherwise booking data from user A leaks to
+  // user B on a shared device or after a re-login.
+  const maxUserId = useAuthStore((s) => s.maxUserId);
+  const lastUserIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (lastUserIdRef.current === undefined) {
+      lastUserIdRef.current = maxUserId;
+      return;
+    }
+    if (lastUserIdRef.current !== maxUserId) {
+      useBookingStore.getState().reset();
+      clearCache();
+      lastUserIdRef.current = maxUserId;
+    }
+  }, [maxUserId]);
+
   useEffect(() => {
     // Signal MAX that the mini-app is ready & expand to full height
     try {
