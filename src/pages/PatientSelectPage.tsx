@@ -43,7 +43,7 @@ export default function PatientSelectPage() {
 
   // Fetch doctor + specs so we can show ALL the doctor's specs in the
   // banner (not just the one auto-picked from the schedule lookup).
-  const { data: doctorData } = useApi<Doctor | null>(
+  const { data: doctorData, loading: doctorLoading } = useApi<Doctor | null>(
     () =>
       doctorId
         ? apiGet<Doctor>(`/doctors/${doctorId}`, { include: "specializations" })
@@ -296,7 +296,7 @@ export default function PatientSelectPage() {
           <h3 className="text-base font-bold text-gray-900">Кого записываем?</h3>
         </div>
 
-        {loading ? (
+        {loading || doctorLoading ? (
           <div className="bg-white rounded-2xl p-6 flex items-center justify-center gap-2 text-gray-400 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
             Загружаем пациентов…
