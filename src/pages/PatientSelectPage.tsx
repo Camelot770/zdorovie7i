@@ -32,6 +32,7 @@ export default function PatientSelectPage() {
     doctorName,
     clinicId,
     clinicName,
+    specializationId,
     specializationName,
     appointmentAt,
     isChild,
@@ -100,10 +101,33 @@ export default function PatientSelectPage() {
       .then((pts) => {
         const list = pts || [];
         setPatients(list);
-        // Pure toggle-based — no name heuristics. See isPatientEligible() below.
+        // Inline copy of isPatientEligible — uses doctor age range first,
+        // falls back to toggle. Mirrors isPatientEligible() below.
+        let ageFrom: number | undefined;
+        let ageTo: number | undefined;
+        // doctorData may not be ready yet on first run — that's fine,
+        // we just fall through to the toggle for now and the
+        // PatientCard's per-render check will catch it later.
+        const dd = doctorData;
+        if (dd) {
+          for (const cl of dd.clinics || []) {
+            if (clinicId && cl.clinicId !== clinicId) continue;
+            for (const sp of cl.specializations || []) {
+              if (specializationId && sp.specializationId !== specializationId) continue;
+              ageFrom = sp.ageFrom;
+              ageTo = sp.ageTo;
+              break;
+            }
+            if (ageFrom !== undefined || ageTo !== undefined) break;
+          }
+        }
+        const isStrictKidDoc = typeof ageTo === "number" && ageTo <= 18;
+        const isStrictAdultDoc = typeof ageFrom === "number" && ageFrom >= 18;
         const isEligible = (p: LinkedPatient): boolean => {
           const a = calcAge(p.birthDate || "");
           if (a === null) return true;
+          if (isStrictKidDoc) return a < 18;
+          if (isStrictAdultDoc) return a >= 18;
           if (isChild && a >= 18) return false;
           if (!isChild && a < 18) return false;
           return true;
@@ -136,10 +160,35 @@ export default function PatientSelectPage() {
     }
   }, [appointmentAt, navigate]);
 
-  /** Pure toggle-based eligibility — no name heuristics. */
+  /** Eligibility uses the doctor's per-(clinic, spec) age range when
+   *  available — that's the authoritative source. Falls back to the
+   *  booking toggle when the doctor row has no specific age constraint. */
   function isPatientEligible(p: LinkedPatient): boolean {
     const age = calcAge(p.birthDate || "");
-    if (age === null) return true; // unknown age — let user decide
+    if (age === null) return true;
+
+    // Find this doctor's per-(clinic, spec) row to read its age range.
+    let ageFrom: number | undefined;
+    let ageTo: number | undefined;
+    if (doctorData) {
+      for (const cl of doctorData.clinics || []) {
+        if (clinicId && cl.clinicId !== clinicId) continue;
+        for (const sp of cl.specializations || []) {
+          if (specializationId && sp.specializationId !== specializationId) continue;
+          ageFrom = sp.ageFrom;
+          ageTo = sp.ageTo;
+          break;
+        }
+        if (ageFrom !== undefined || ageTo !== undefined) break;
+      }
+    }
+
+    const isStrictKidDoc = typeof ageTo === "number" && ageTo <= 18;
+    const isStrictAdultDoc = typeof ageFrom === "number" && ageFrom >= 18;
+    if (isStrictKidDoc) return age < 18;     // kid doctor → only kid patients
+    if (isStrictAdultDoc) return age >= 18;  // adult doctor → only adult patients
+
+    // Open range — fall back to the booking toggle.
     if (isChild && age >= 18) return false;
     if (!isChild && age < 18) return false;
     return true;
