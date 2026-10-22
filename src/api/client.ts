@@ -1,6 +1,8 @@
 import type { Clinic, Specialization, Doctor, Schedule, Appointment, Service, Patient, LinkedPatient } from "../types";
 
-const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+// Default to the same-origin /api proxy (vercel.json rewrites it to the
+// backend), so the backend host can move without rebuilding the app.
+const API_URL = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "");
 
 // ---- In-memory GET cache: avoids re-fetching on page navigation ----
 const _cache = new Map<string, { data: unknown; ts: number; promise?: Promise<unknown> }>();
